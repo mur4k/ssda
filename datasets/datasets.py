@@ -71,7 +71,7 @@ if __name__ == '__main__':
 	mean = 0.
 	std = 0.
 	nb_samples = 0.
-	for i, data in enumerate(dataloader)
+	for i, data in enumerate(dataloader):
 		image = data['image']
 		gt = data['gt']
 		name = data['name']

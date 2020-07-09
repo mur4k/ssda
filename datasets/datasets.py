@@ -8,14 +8,7 @@ from torchvision import transforms, utils
 
 
 class SegmentationDataSet(Dataset):
-    def __init__(self, 
-    			 root, 
-    			 image_list_name,
-    			 label_list_name, 
-    			 size=None, 
-    			 mean=(0, 0, 0), 
-    			 std=(1, 1, 1),
-    			 label2train=None):
+    def __init__(self, root, image_list_name, label_list_name, size=None, mean=(0, 0, 0), std=(1, 1, 1), label2train=None):
         self.root = root
         self.image_list_name = image_list_name
         self.label_list_name = label_list_name
@@ -73,13 +66,7 @@ class SegmentationDataSet(Dataset):
 
 
 if __name__ == '__main__':
-	dataset = SegmentationDataSet(root='/nfs/students/mirlas/data',
-								  image_list_name='gta5_images.txt',
-								  label_list_name='gta5_labels.txt',
-								  size=None,
-								  mean=(0, 0, 0),
-								  std=(1, 1, 1),
-								  labels2train=None)
+	dataset = SegmentationDataSet(root='/nfs/students/mirlas/data', image_list_name='gta5_images.txt', label_list_name='gta5_labels.txt', size=None, mean=(0, 0, 0), std=(1, 1, 1), labels2train=None)
 	dataloader = data.DataLoader(dataset, batch_size=10)
 	print("Length of the DataLoader:", len(dataloader))
 	mean = 0.

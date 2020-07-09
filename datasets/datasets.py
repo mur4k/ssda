@@ -80,9 +80,9 @@ if __name__ == '__main__':
 			print(gt.shape)
 		image = image.view(image.size(0), image.size(1), -1)
 		mean += image.mean(2).sum(0)
-    	meansq += (image**2).mean(2).sum(0)
-    	nb_samples += image.size(0)
-    std = torch.sqrt((meansq - mean**2) / nb_samples)
-    mean = mean / nb_samples
-    print('mean:', mean)
-    print('std:', std)
+		meansq += (image**2).mean(2).sum(0)
+		nb_samples += image.size(0)
+	std = torch.sqrt((meansq - mean**2) / nb_samples)
+	mean = mean / nb_samples
+	print('mean:', mean)
+	print('std:', std)

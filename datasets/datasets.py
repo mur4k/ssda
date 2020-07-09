@@ -6,7 +6,6 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
 
-
 class SegmentationDataSet(Dataset):
     def __init__(self, root, image_list_name, label_list_name, size=None, mean=(0, 0, 0), std=(1, 1, 1), label2train=None):
         self.root = root

@@ -52,7 +52,7 @@ class SegmentationDataSet(Dataset):
 		else:
 			gt = 255 * np.ones(label.shape, dtype=np.int8)
 			for k, v in self.label2train.items():
-		    	gt[label == k] = v
+				gt[label == k] = v
 
 		size = image.shape
 		image -= self.mean

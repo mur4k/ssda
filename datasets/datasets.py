@@ -22,7 +22,7 @@ class SegmentationDataSet(Dataset):
 			self.images_paths = [os.path.join(self.root, p.strip()) for p in images_list]
 		self.images_paths = [p for p in self.images_paths if os.path.isfile(p)]
 		with open(self.label_list_path) as labels_list:
-			self.labels_paths = [os.path.join(self.root, p.strip()) for p in label_list]
+			self.labels_paths = [os.path.join(self.root, p.strip()) for p in labels_list]
 		self.labels_paths = [p for p in self.labels_paths if os.path.isfile(p)]
 		self.files = list(zip(self.images_paths, self.labels_paths))
 
@@ -57,32 +57,35 @@ class SegmentationDataSet(Dataset):
 		size = image.shape
 		image -= self.mean
 		image /= self.std
-		image = image.transpose((2, 0, 1))
 
 		return {'image': transforms.ToTensor()(image), 
-			    'gt': transforms.ToTensor()(gt),
-			    'name': name}
+			'gt': transforms.ToTensor()(gt),
+			'name': name}
 
 
 if __name__ == '__main__':
-	dataset = SegmentationDataSet(root='/nfs/students/mirlas/data', image_list_name='gta5_images.txt', label_list_name='gta5_labels.txt', size=None, mean=(0, 0, 0), std=(1, 1, 1), labels2train=None)
-	dataloader = data.DataLoader(dataset, batch_size=10)
+	print("Compiling the dataset")
+	dataset = SegmentationDataSet(root='/nfs/students/mirlas/data', image_list_name='gta5_images.txt', label_list_name='gta5_labels.txt', size=None, mean=(0, 0, 0), std=(1, 1, 1), label2train=None)
+	print("Compiling the dataloader")
+	dataloader = DataLoader(dataset, batch_size=1)
 	print("Length of the DataLoader:", len(dataloader))
 	mean = 0.
+	meansq = 0.
 	std = 0.
 	nb_samples = 0.
 	for i, data in enumerate(dataloader):
 		image = data['image']
 		gt = data['gt']
 		name = data['name']
-		if i == 0:
-			print(image.shape)
-			print(gt.shape)
 		image = image.view(image.size(0), image.size(1), -1)
 		mean += image.mean(2).sum(0)
 		meansq += (image**2).mean(2).sum(0)
 		nb_samples += image.size(0)
-	std = torch.sqrt((meansq - mean**2) / nb_samples)
+		if i == 0:
+			print(image.shape)
+			print(gt.shape)
+			print(mean, meansq, nb_samples)
+	print(nb_samples)
 	mean = mean / nb_samples
 	print('mean:', mean)
 	print('std:', std)

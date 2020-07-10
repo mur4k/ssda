@@ -61,4 +61,3 @@ class SegmentationDataSet(Dataset):
 		return {'image': transforms.ToTensor()(image), 
 			'gt': transforms.ToTensor()(gt),
 			'name': name}
-

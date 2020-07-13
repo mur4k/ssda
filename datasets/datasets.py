@@ -46,19 +46,13 @@ class SegmentationDataSet(Dataset):
 		label = Image.open(label_path)
 		name = os.path.basename(image_path)
 
-		image = np.asarray(image, np.float32)
-		label = np.asarray(label, np.int8)
+		data = {'image': self.image_preprocess_transform(image), 
+			'gt': self.label_preprocess_transform(label),
+			'name': name}
 
 		# re-assign labels to match the unified format
-		if self.label2train is None:
-			gt = label.copy()
-		else:
-			gt = 255 * np.ones(label.shape, dtype=np.int8)
+		if self.label2train is not None:
 			for k, v in self.label2train.items():
-				gt[label == k] = v
-
-		size = image.shape
+				data['gt'][data['gt'] == k] = v
 		
-		return {'image': self.image_preprocess_transform(image), 
-			'gt': self.label_preprocess_transform(gt),
-			'name': name}
+		return data

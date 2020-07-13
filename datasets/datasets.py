@@ -7,7 +7,8 @@ from torchvision import transforms, utils
 
 
 class SegmentationDataSet(Dataset):
-	def __init__(self, root, image_list_name, label_list_name, size=None, mean=(0, 0, 0), std=(1, 1, 1), label2train=None):
+	def __init__(self, root, image_list_name, label_list_name, size, 
+		mean=(0, 0, 0), std=(1, 1, 1), label2train=None):
 		self.root = root
 		self.image_list_name = image_list_name
 		self.label_list_name = label_list_name
@@ -15,6 +16,13 @@ class SegmentationDataSet(Dataset):
 		self.label2train = label2train
 		self.mean = mean
 		self.std = std
+		self.image_preprocess_transform = transforms.Compose([
+			transforms.Resize(self.size, Image.BILINEAR), 
+			transforms.ToTensor(), 
+			transforms.Normalize(mean=self.mean, std=self.std)])
+		self.label_preprocess_transform = transforms.Compose([
+			transforms.Resize(self.size, Image.NEAREST),
+			transforms.ToTensor()])
 		# read lists of files
 		self.image_list_path = os.path.join(root, self.image_list_name)
 		self.label_list_path = os.path.join(root, self.label_list_name)
@@ -38,11 +46,6 @@ class SegmentationDataSet(Dataset):
 		label = Image.open(label_path)
 		name = os.path.basename(image_path)
 
-		# resize
-		if self.size is not None:
-			image = image.resize(self.size, Image.BICUBIC)
-			label = label.resize(self.size, Image.NEAREST)
-
 		image = np.asarray(image, np.float32)
 		label = np.asarray(label, np.int8)
 
@@ -55,9 +58,7 @@ class SegmentationDataSet(Dataset):
 				gt[label == k] = v
 
 		size = image.shape
-		image -= self.mean
-		image /= self.std
-
-		return {'image': transforms.ToTensor()(image), 
-			'gt': transforms.ToTensor()(gt),
+		
+		return {'image': self.image_preprocess_transform(image), 
+			'gt': self.label_preprocess_transform(gt),
 			'name': name}

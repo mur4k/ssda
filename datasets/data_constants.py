@@ -1,3 +1,5 @@
+NUM_CLASSES = 19
+
 CITYSCAPES_CLASSES = [
 	'unlabeled', 
 	'ego vehicle',

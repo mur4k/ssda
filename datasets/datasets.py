@@ -2,8 +2,8 @@ import os
 import torch
 import numpy as np
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+from torch.utils.data import Dataset
+from torchvision import transforms
 
 
 class SegmentationDataSet(Dataset):
@@ -12,6 +12,7 @@ class SegmentationDataSet(Dataset):
 		self.root = root
 		self.image_list_name = image_list_name
 		self.label_list_name = label_list_name
+		# compile preprocessing transforms
 		self.size = size
 		self.label2train = label2train
 		self.mean = mean

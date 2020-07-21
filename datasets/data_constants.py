@@ -1,4 +1,25 @@
 NUM_CLASSES = 19
+EPS = 1e-8
+CLASSES = [
+    "road",
+    "sidewalk",
+    "building",
+    "wall",
+    "fence",
+    "pole",
+    "light",
+    "sign",
+    "vegetation",
+    "terrain",
+    "sky",
+    "person",
+    "rider",
+    "car",
+    "truck",
+    "bus",
+    "train",
+    "motocycle",
+    "bicycle"]
 
 CITYSCAPES_CLASSES = [
 	'unlabeled', 

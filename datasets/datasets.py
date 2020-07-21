@@ -23,7 +23,7 @@ class SegmentationDataSet(Dataset):
 			transforms.Normalize(mean=self.mean, std=self.std)])
 		self.label_preprocess_transform = transforms.Compose([
 			transforms.Resize(self.size, Image.NEAREST),
-			transforms.Lambda(lambda gt: torch.tensor(np.array(gt)))])
+			transforms.Lambda(lambda gt: torch.tensor(np.array(gt, dtype=np.int64)))])
 		# read lists of files
 		self.image_list_path = os.path.join(root, self.image_list_name)
 		self.label_list_path = os.path.join(root, self.label_list_name)

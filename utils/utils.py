@@ -36,7 +36,7 @@ def evaluate_segmentation_set(inf_dataloader, num_batches, seg_model, seg_loss, 
         loss += seg_loss(output, gt).item()
         pred = output.argmax(1)
         cm += fast_hist(pred, gt, num_classes)
-    return {'loss': loss / set_size, 
+    return {'loss': loss / num_batches, 
             'pixel_accuracy': pixel_acc(cm).cpu().tolist(),
             'classwise_iou': per_class_iou(cm).cpu().tolist()}
 
@@ -84,8 +84,8 @@ def write_summary_images(writer, inf_dataloader, mean, std, labels2train, labels
 
 def write_predictions(inf_dataloader, seg_model, device, batches_to_visualize, predictions_path,
     mean, std, labels2train, labels2palette, prefix='src_'):
-    std = torch.tensor(std, device=image.device).view(3, 1, 1)
-    mean = torch.tensor(mean, device=image.device).view(3, 1, 1)
+    std = torch.tensor(std, device=device).view(3, 1, 1)
+    mean = torch.tensor(mean, device=device).view(3, 1, 1)
     for i in range(batches_to_visualize):
         _, data = next(inf_dataloader)
         image, gt, name = data['image'], data['gt'], data['name']
@@ -95,16 +95,18 @@ def write_predictions(inf_dataloader, seg_model, device, batches_to_visualize, p
         output = F.interpolate(output, gt.shape[-2:], mode='bilinear', align_corners=False)
         pred = output.argmax(1)
         for j in range(len(image)):
-            gt_colored = create_color_map(gt[i], labels2train, labels2palette)
-            pred_colored = create_color_map(pred[i], labels2train, labels2palette)
-            image_to_save = (image[i] * std + mean) * 255
-            image_to_save = image_to_save.type(torch.uint8)
-            save_image(image_to_save,
-                       os.path.join(predictions_path, prefix+'inp_'+name[i]+'.png'))
-            save_image(gt_colored,
-                       os.path.join(predictions_path, prefix+'gt_'+name[i]+'.png'))
-            save_image(pred_colored,
-                       os.path.join(predictions_path, prefix+'pred_'+name[i]+'.png'))
+            gt_colored = create_color_map(gt[j], labels2train, labels2palette)
+            pred_colored = create_color_map(pred[j], labels2train, labels2palette)
+            image_to_save = (image[j] * std + mean)
+            image_to_save = image_to_save.clamp(min=0, max=1)
+            pred_colored = pred_colored.clamp(min=0, max=255)
+            gt_colored = gt_colored.clamp(min=0, max=255)
+            save_image(image_to_save.type(torch.float),
+                       os.path.join(predictions_path, prefix+'inp_'+name[j]))
+            save_image(gt_colored.type(torch.float) / 255,
+                       os.path.join(predictions_path, prefix+'gt_'+name[j]))
+            save_image(pred_colored.type(torch.float) / 255,
+                       os.path.join(predictions_path, prefix+'pred_'+name[j]))
 
 def sample_features(inf_dataloader, seg_model, device, num_batches, pts_to_sample):
     deep_features = []
@@ -117,9 +119,9 @@ def sample_features(inf_dataloader, seg_model, device, num_batches, pts_to_sampl
         features = seg_model.backbone(image)['out']
         gt_downscaled = F.interpolate(gt.unsqueeze(1).type(torch.float), features.shape[-2:], mode='nearest')
         gt_downscaled = gt_downscaled.type(gt.type())
-        features = features.premute(0, 2, 3, 1)
+        features = features.permute(0, 2, 3, 1)
         features = features.reshape(-1, features.size(3))
-        gt_downscaled = gt_downscaled.premute(0, 2, 3, 1)
+        gt_downscaled = gt_downscaled.permute(0, 2, 3, 1)
         gt_downscaled = gt_downscaled.reshape(-1)
         perm = torch.randperm(features.size(0))
         idx = perm[:pts_to_sample]

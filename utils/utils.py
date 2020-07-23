@@ -94,17 +94,17 @@ def write_predictions(inf_dataloader, seg_model, device, batches_to_visualize, p
         output = seg_model(image)['out']
         output = F.interpolate(output, gt.shape[-2:], mode='bilinear', align_corners=False)
         pred = output.argmax(1)
-            for j in range(len(image)):
-                gt_colored = create_color_map(gt[i], labels2train, labels2palette)
-                pred_colored = create_color_map(pred[i], labels2train, labels2palette)
-                image_to_save = (image[i] * std + mean) * 255
-                image_to_save = image_to_save.type(torch.uint8)
-                save_image(image_to_save,
-                           os.path.join(predictions_path, prefix+'inp_'+name[i]+'.png'))
-                save_image(gt_colored,
-                           os.path.join(predictions_path, prefix+'gt_'+name[i]+'.png'))
-                save_image(pred_colored,
-                           os.path.join(predictions_path, prefix+'pred_'+name[i]+'.png'))
+        for j in range(len(image)):
+            gt_colored = create_color_map(gt[i], labels2train, labels2palette)
+            pred_colored = create_color_map(pred[i], labels2train, labels2palette)
+            image_to_save = (image[i] * std + mean) * 255
+            image_to_save = image_to_save.type(torch.uint8)
+            save_image(image_to_save,
+                       os.path.join(predictions_path, prefix+'inp_'+name[i]+'.png'))
+            save_image(gt_colored,
+                       os.path.join(predictions_path, prefix+'gt_'+name[i]+'.png'))
+            save_image(pred_colored,
+                       os.path.join(predictions_path, prefix+'pred_'+name[i]+'.png'))
 
 def sample_features(inf_dataloader, seg_model, device, num_batches, pts_to_sample):
     deep_features = []

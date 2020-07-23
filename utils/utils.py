@@ -5,7 +5,7 @@ from PIL import Image
 from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-from torchvision.utils import make_grid
+from torchvision.utils import make_grid, save_image
 
 
 def fast_hist(pred, gt, num_classes):
@@ -18,37 +18,15 @@ def per_class_iou(hist):
 def pixel_acc(hist):
     return torch.diag(hist).sum().float() / hist.sum().float()
 
-def compute_iou(pred, gt, num_classes):
-    cm = torch.zeros(num_classes, num_classes, device=gt.device)
-    for i in range(len(pred)):
-        cm += fast_hist(pred[i], gt[i], num_classes)
-    classwise_iou = per_class_iou(cm)
-    pix_acc = pixel_acc(cm)
-    return pix_acc, classwise_iou
-
 def inf_iter(dataloader):
     while True:
         for batch_idx, data in enumerate(dataloader):
             yield batch_idx, data
-            
-def evaluate_segmentation_batch(inf_dataloader, seg_model, seg_loss, num_classes, device):
-    _, data = next(inf_dataloader)
-    image, gt, name = data['image'], data['gt'], data['name']
-    image = image.to(device)
-    gt = gt.to(device)
-    output = seg_model(image)['out']
-    output = F.interpolate(output, gt.shape[-2:], mode='bilinear', align_corners=False)
-    loss = seg_loss(output, gt).item()
-    pred = output.argmax(1)
-    pixel_accuracy, class_iou = compute_iou(pred, gt, num_classes)
-    return {'loss': loss, 
-            'pixel_accuracy': pixel_accuracy.cpu().tolist(),
-            'classwise_iou': class_iou.cpu().tolist()}
-        
-def evaluate_segmentation_set(inf_dataloader, set_size, seg_model, seg_loss, num_classes, device):
+
+def evaluate_segmentation_set(inf_dataloader, num_batches, seg_model, seg_loss, num_classes, device):
     loss = 0.0
     cm = torch.zeros(num_classes, num_classes, device=device)
-    for i in range(set_size):
+    for i in range(num_batches):
         _, data = next(inf_dataloader)
         image, gt, name = data['image'], data['gt'], data['name']
         image = image.to(device)
@@ -70,23 +48,91 @@ def create_color_map(gt, labels2train, labels2palette):
         color_map[gt == labels2train[class_id]] = color_value
     return color_map.permute(2, 0, 1)
 
-def compile_summary_image(image, output, gt, mean, std, labels2train, labels2palette):
-	std = torch.tensor(std, device=image.device).view(3, 1, 1)
-	mean = torch.tensor(mean, device=image.device).view(3, 1, 1)
-	image = (image * std + mean) * 255
-	image = image.type(torch.uint8)
-	gt = create_color_map(gt, labels2train, labels2palette)
-	pred = output.argmax(0)
-	pred = create_color_map(pred, labels2train, labels2palette)
-	grid = make_grid([image, pred, gt],
-	                 nrow=1,
-	                 normalize=False,
-	                 scale_each=False)
-	grid = F.interpolate(grid.type(torch.float).unsqueeze(0), scale_factor=0.25, mode='bilinear', align_corners=False)
-	grid = grid.clamp(min=0, max=255).squeeze()
-	return grid.type(torch.uint8)
+def compile_summary_image(image, output, gt, mean, std, labels2train, labels2palette, scale_factor=0.5):
+    std = torch.tensor(std, device=image.device).view(3, 1, 1)
+    mean = torch.tensor(mean, device=image.device).view(3, 1, 1)
+    image = (image * std + mean) * 255
+    image = image.type(torch.uint8)
+    gt_colored = create_color_map(gt, labels2train, labels2palette)
+    pred = output.argmax(0)
+    pred = create_color_map(pred, labels2train, labels2palette)
+    grid = make_grid([image, pred, gt_colored],
+                     nrow=1,
+                     normalize=False,
+                     scale_each=False)
+    grid = F.interpolate(grid.type(torch.float).unsqueeze(0), scale_factor=scale_factor, mode='bilinear', align_corners=False)
+    grid = grid.clamp(min=0, max=255).squeeze()
+    return grid.type(torch.uint8)
 
-def select_n_random(dataloader, n=100):
-    assert len(data) == len(labels)
-    perm = torch.randperm(len(data))
-    return data[perm][:n], labels[perm][:n]
+def write_summary_images(writer, inf_dataloader, mean, std, labels2train, labels2palette, seg_model, device,
+                         num_batches=1, tag='Images', scale_factor=0.5, global_step=0):
+    for i in range(num_batches):
+        _, data = next(inf_dataloader)
+        image, gt, name = data['image'], data['gt'], data['name']
+        image = image.to(device)
+        gt = gt.to(device)
+        output = seg_model(image)['out']
+        output = F.interpolate(output, gt.shape[-2:], mode='bilinear', align_corners=False)
+        for j in range(len(image)):
+            summary_image = compile_summary_image(image[i], output[i], gt[i],
+                mean, std, labels2train, labels2palette, scale_factor=scale_factor)
+            writer.add_image(tag,
+                img_tensor=summary_image,
+                global_step=global_step+i+j,
+                walltime=None,
+                dataformats='CHW')
+
+def write_predictions(inf_dataloader, seg_model, device, batches_to_visualize, predictions_path,
+    mean, std, labels2train, labels2palette, prefix='src_'):
+    std = torch.tensor(std, device=image.device).view(3, 1, 1)
+    mean = torch.tensor(mean, device=image.device).view(3, 1, 1)
+    for i in range(batches_to_visualize):
+        _, data = next(inf_dataloader)
+        image, gt, name = data['image'], data['gt'], data['name']
+        image = image.to(device)
+        gt = gt.to(device)
+        output = seg_model(image)['out']
+        output = F.interpolate(output, gt.shape[-2:], mode='bilinear', align_corners=False)
+        pred = output.argmax(1)
+            for j in range(len(image)):
+                gt_colored = create_color_map(gt[i], labels2train, labels2palette)
+                pred_colored = create_color_map(pred[i], labels2train, labels2palette)
+                image_to_save = (image[i] * std + mean) * 255
+                image_to_save = image_to_save.type(torch.uint8)
+                save_image(image_to_save,
+                           os.path.join(predictions_path, prefix+'inp_'+name[i]+'.png'))
+                save_image(gt_colored,
+                           os.path.join(predictions_path, prefix+'gt_'+name[i]+'.png'))
+                save_image(pred_colored,
+                           os.path.join(predictions_path, prefix+'pred_'+name[i]+'.png'))
+
+def sample_features(inf_dataloader, seg_model, device, num_batches, pts_to_sample):
+    deep_features = []
+    labels = []
+    for i in range(num_batches):
+        _, data = next(inf_dataloader)
+        image, gt, name = data['image'], data['gt'], data['name']
+        image = image.to(device)
+        gt = gt.to(device)
+        features = seg_model.backbone(image)['out']
+        gt_downscaled = F.interpolate(gt.unsqueeze(1).type(torch.float), features.shape[-2:], mode='nearest')
+        gt_downscaled = gt_downscaled.type(gt.type())
+        features = features.premute(0, 2, 3, 1)
+        features = features.reshape(-1, features.size(3))
+        gt_downscaled = gt_downscaled.premute(0, 2, 3, 1)
+        gt_downscaled = gt_downscaled.reshape(-1)
+        perm = torch.randperm(features.size(0))
+        idx = perm[:pts_to_sample]
+        deep_features.append(features[idx].cpu())
+        labels.append(gt_downscaled[idx].cpu())
+    return torch.cat(deep_features, dim=0), torch.cat(labels, dim=0).tolist()
+
+def create_embeddings(writer, inf_src_dataloader, inf_tar_dataloader, seg_model, device,
+    num_batches, pts_to_sample):
+    src_features, src_labels = sample_features(inf_src_dataloader, seg_model, device, num_batches, pts_to_sample)
+    tar_features, tar_labels = sample_features(inf_tar_dataloader, seg_model, device, num_batches, pts_to_sample)
+    dataset_label = ['src']*len(src_labels) + ['tar']*len(tar_labels)
+    gt_label = src_labels + tar_labels
+    all_features = torch.cat([src_features, tar_features], dim=0)
+    all_labels = list(zip(gt_label, dataset_label))
+    writer.add_embedding(all_features, metadata=all_labels, metadata_header=['gt', 'domain'])

@@ -46,7 +46,7 @@
 seml:
   db_collection: segmentation
   executable: segmentation.py
-  output_dir: slurm
+  output_dir: slurm-output
 
 slurm:
   name: segmentation
@@ -60,11 +60,6 @@ slurm:
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
-  reg_scale: 0.0
-  keep_prob: 0.5
-  max_epochs: 500
-  patience: 10
-  display_step: 25
   # data params
   source_dir: /nfs/students/mirlas/data/
   target_dir: /nfs/students/mirlas/data/

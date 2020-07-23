@@ -161,7 +161,7 @@ def run(source_dir, target_dir,
     logging.info('Start training')
     seg_model.train()
     for epoch in range(start_epoch, max_epochs):
-        logging.info(f'Epoch: {epoch}')
+        logging.info(f'Epoch: {epoch}/{max_epochs}')
         #  iterate over the dataset
         for batch_idx, data in enumerate(source_train_dataloader):
             #  zero the parameter gradients

@@ -36,8 +36,7 @@ class SegmentationDataSet(Dataset):
         self.files = list(zip(self.images_paths, self.labels_paths))
 
     def __len__(self):
-    # return len(self.files)
-        return 4
+        return len(self.files)
 
     def __getitem__(self, index):
         image_path, label_path = self.files[index]

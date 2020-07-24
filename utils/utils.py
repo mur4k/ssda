@@ -74,7 +74,7 @@ def write_summary_images(writer, inf_dataloader, mean, std, labels2train, labels
         output = seg_model(image)['out']
         output = F.interpolate(output, gt.shape[-2:], mode='bilinear', align_corners=False)
         for j in range(len(image)):
-            summary_image = compile_summary_image(image[i], output[i], gt[i],
+            summary_image = compile_summary_image(image[j], output[j], gt[j],
                 mean, std, labels2train, labels2palette, scale_factor=scale_factor)
             writer.add_image(tag,
                 img_tensor=summary_image,

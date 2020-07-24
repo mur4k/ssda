@@ -44,12 +44,13 @@
 
 
 seml:
-  db_collection: segmentation
+  name: segmentation
+  project_root_dir: /nfs/homedirs/mirlas/ssda
   executable: segmentation.py
-  output_dir: slurm-output
+  conda_environment: ssda
+  output_dir: /nfs/homedirs/mirlas/ssda/slurm-output/
 
 slurm:
-  name: segmentation
   experiments_per_job: 1
   sbatch_options:
     gres: gpu:1       # num GPUs
@@ -81,12 +82,12 @@ fixed:
   classification_head: deeplabv3
   pretrained_backbone: True
   # optim params
-  learning_rate: 2.5e-4
+  learning_rate: 0.00025
   momentum: 0.9
   weight_decay: 0.0005
   lrs_power: 0.9
   # training loop params
-  max_iter: 200000
+  max_iter: 100000
   epoch_to_resume: 0
   batches_to_eval_train: 5
   batches_to_visualize: 5

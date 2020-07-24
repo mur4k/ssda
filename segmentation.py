@@ -88,11 +88,11 @@ def run(source_dir, target_dir,
                             mean=CITYSCAPES_MEAN, std=CITYSCAPES_STD, label2train=CITYSCAPES_LABELS2TRAIN)
 
     source_train_dataloader = DataLoader(source_train_dataset, batch_size=train_batch_size,
-                                shuffle=True, pin_memory=cuda_status)
+                                shuffle=True, pin_memory=cuda_status, drop_last=True)
     source_val_dataloader = DataLoader(source_val_dataset, batch_size=val_batch_size, 
-                                shuffle=True, pin_memory=cuda_status)
+                                shuffle=True, pin_memory=cuda_status, drop_last=True)
     target_val_dataloader = DataLoader(target_val_dataset, batch_size=val_batch_size, 
-                                shuffle=True, pin_memory=cuda_status)
+                                shuffle=True, pin_memory=cuda_status, drop_last=True)
 
     inf_source_val_dataloader = inf_iter(source_val_dataloader)
     inf_target_val_dataloader = inf_iter(target_val_dataloader)
@@ -224,8 +224,11 @@ def run(source_dir, target_dir,
                 running_cm = torch.zeros(NUM_CLASSES, NUM_CLASSES, device=device)
 
             #  write images to the summary (twice per epoch)
-            if (batch_idx + 1) == len(source_train_dataloader) or (batch_idx + 1) == len(source_train_dataloader) // 2: 
-                print('Writing summary images')
+            if (batch_idx + 1) == len(source_train_dataloader) or \
+                (batch_idx + 1) == len(source_train_dataloader) // 2 or \
+                (batch_idx + 1) == len(source_train_dataloader) // 4 or \
+                (batch_idx + 1) == 3 * len(source_train_dataloader) // 4: 
+                logging.info('Writing summary images')
                 with torch.no_grad():
                     #  train
                     for i in range(len(image)):
@@ -261,8 +264,10 @@ def run(source_dir, target_dir,
     #  evaluate the model
     seg_model.eval()
     with torch.no_grad():
+        logging.info('Evaluate src')
         src_val_metrics = evaluate_segmentation_set(inf_source_val_dataloader, len(source_val_dataloader), 
                             seg_model, seg_loss, NUM_CLASSES, device)
+        logging.info('Evaluate tar')
         tar_val_metrics = evaluate_segmentation_set(inf_target_val_dataloader, len(target_val_dataloader), 
                             seg_model, seg_loss, NUM_CLASSES, device)
     
@@ -274,16 +279,19 @@ def run(source_dir, target_dir,
     #  create visualizations: t-SNE and qualititative predictions
     predictions_path = os.path.join(pred_dir, model_name)
     with torch.no_grad():
+        logging.info('Write predcitions for src')
         write_predictions(inf_source_val_dataloader, 
             seg_model, device, 
             batches_to_visualize, predictions_path, 
             GTA5_MEAN, GTA5_STD, GTA5_LABELS2TRAIN, 
             GTA5_LABELS2PALETTE, prefix='src_')
+        logging.info('Write predcitions for tar')
         write_predictions(inf_target_val_dataloader, 
             seg_model, device, 
             batches_to_visualize, predictions_path,
             CITYSCAPES_MEAN, CITYSCAPES_STD, CITYSCAPES_LABELS2TRAIN,
             CITYSCAPES_LABELS2PALETTE, prefix='tar_')
+        logging.info('Create t-SNE embeddings')
         create_embeddings(writer, inf_source_val_dataloader, inf_target_val_dataloader,
             seg_model, device, 
             batches_to_visualize, points_to_sample)

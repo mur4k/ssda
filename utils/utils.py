@@ -138,3 +138,10 @@ def create_embeddings(writer, inf_src_dataloader, inf_tar_dataloader, seg_model,
     all_features = torch.cat([src_features, tar_features], dim=0)
     all_labels = list(zip(gt_label, dataset_label))
     writer.add_embedding(all_features, metadata=all_labels, metadata_header=['gt', 'domain'])
+
+def transfer_model_and_optimizer(model, optimizer, device):
+    for state in optimizer.state.values():
+        for k, v in state.items():
+            if isinstance(v, torch.Tensor):
+                state[k] = v.to(device)
+    model = model.to(device)

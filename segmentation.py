@@ -38,11 +38,11 @@ def run(source_dir, target_dir,
     learning_rate, momentum, weight_decay,
     max_iter, epoch_to_resume, lrs_power,
     batches_to_eval_train, batches_to_visualize, 
-    points_to_sample, save_step, display_step):
+    points_to_sample, save_step, display_step, seed):
 
     logging.info('Received the following configuration:')
     logging.info(f'Source_dir: {source_dir}, target_dir: {target_dir}, '
-                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}' 
+                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}, '
                  f'source_train_images: {source_train_images}, source_train_labels: {source_train_labels}, '
                  f'source_val_images: {source_val_images}, source_val_labels: {source_val_labels}, '
                  f'target_val_images: {target_val_images}, target_val_labels: {target_val_labels}, '
@@ -52,7 +52,7 @@ def run(source_dir, target_dir,
                  f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
                  f'max_iter: {max_iter}, epoch_to_resume: {epoch_to_resume}, lrs_power: {lrs_power}, '
                  f'batches_to_eval_train: {batches_to_eval_train}, batches_to_visualize: {batches_to_visualize}, '
-                 f'points_to_sample: {points_to_sample}, save_step:{save_step}, display_step: {display_step}')
+                 f'points_to_sample: {points_to_sample}, save_step:{save_step}, display_step: {display_step}, seed: {seed}')
     
     #  initialize the global parameters
     cuda_status = torch.cuda.is_available()
@@ -66,6 +66,8 @@ def run(source_dir, target_dir,
         'lr{:.3e}_m{:.3e}_wd{:.3e}_lrsp{:.1e}'.format(learning_rate, momentum, weight_decay, lrs_power)
         ])
     start_epoch = 0
+    if seed > 0:
+        torch.manual_seed(seed)
 
     #  create neccessary directories for snapshots and logs
     if not os.path.exists(os.path.join(snapshots_dir, model_name)):
@@ -136,17 +138,13 @@ def run(source_dir, target_dir,
         if 'scheduler' in checkpoint:
             scheduler.load_state_dict(checkpoint['scheduler'])
         if 'curr_epoch' in checkpoint:
-            curr_epoch = checkpoint['curr_epoch']
+            start_epoch = checkpoint['curr_epoch']
         if 'loss' in checkpoint:
             loss = checkpoint['loss']
 
     #  move everything to a device before training
     logging.info('Transfer models&optimizer to a device')
-    for state in optimizer.state.values():
-        for k, v in state.items():
-            if isinstance(v, torch.Tensor):
-                state[k] = v.to(device)
-    seg_model = seg_model.to(device)
+    transfer_model_and_optimizer(seg_model, optimizer, device)
 
     #  initialize the SummaryWriter
     logging.info('Initializing the SummaryWriter')

@@ -278,13 +278,13 @@ def run(source_dir, target_dir,
     predictions_path = os.path.join(pred_dir, model_name)
     with torch.no_grad():
         logging.info('Write predcitions for src')
-        write_predictions(inf_source_val_dataloader, 
+        write_predictions(source_val_dataloader, 
             seg_model, device, 
             batches_to_visualize, predictions_path, 
             GTA5_MEAN, GTA5_STD, GTA5_LABELS2TRAIN, 
             GTA5_LABELS2PALETTE, prefix='src_')
         logging.info('Write predcitions for tar')
-        write_predictions(inf_target_val_dataloader, 
+        write_predictions(target_val_dataloader, 
             seg_model, device, 
             batches_to_visualize, predictions_path,
             CITYSCAPES_MEAN, CITYSCAPES_STD, CITYSCAPES_LABELS2TRAIN,

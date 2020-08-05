@@ -82,12 +82,13 @@ def write_summary_images(writer, inf_dataloader, mean, std, labels2train, labels
                 walltime=None,
                 dataformats='CHW')
 
-def write_predictions(inf_dataloader, seg_model, device, batches_to_visualize, predictions_path,
+def write_predictions(dataloader, seg_model, device, batches_to_visualize, predictions_path,
     mean, std, labels2train, labels2palette, prefix='src_'):
     std = torch.tensor(std, device=device).view(3, 1, 1)
     mean = torch.tensor(mean, device=device).view(3, 1, 1)
-    for i in range(batches_to_visualize):
-        _, data = next(inf_dataloader)
+    for i, data in enumerate(dataloader):
+        if i >= batches_to_visualize:
+            break
         image, gt, name = data['image'], data['gt'], data['name']
         image = image.to(device)
         gt = gt.to(device)

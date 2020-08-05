@@ -94,3 +94,4 @@ fixed:
   points_to_sample: 1000
   save_step: 5
   display_step: 100
+  seed: 42

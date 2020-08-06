@@ -44,9 +44,9 @@
 
 
 seml:
-  name: segmentation
+  name: segmentation_da
   project_root_dir: /nfs/homedirs/mirlas/ssda
-  executable: segmentation.py
+  executable: segmentation_da.py
   conda_environment: ssda
   output_dir: /nfs/homedirs/mirlas/ssda/slurm-output/
 

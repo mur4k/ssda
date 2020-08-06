@@ -221,7 +221,7 @@ def run(source_dir, target_dir,
                 running_loss = 0.0
                 running_cm = torch.zeros(NUM_CLASSES, NUM_CLASSES, device=device)
 
-            #  write images to the summary (twice per epoch)
+            #  write images to the summary (4 times per epoch)
             if (batch_idx + 1) == len(source_train_dataloader) or \
                 (batch_idx + 1) == len(source_train_dataloader) // 2 or \
                 (batch_idx + 1) == len(source_train_dataloader) // 4 or \

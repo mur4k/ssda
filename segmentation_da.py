@@ -35,7 +35,7 @@ def run(source_dir, target_dir,
     target_train_images, target_train_labels, 
     target_val_images, target_val_labels, 
     train_batch_size, val_batch_size,
-    image_height, image_width, 
+    image_height, image_width, num_workers,
     backbone, classification_head, pretrained_backbone, 
     da_injection_point, lambda_da,
     learning_rate, momentum, weight_decay,
@@ -52,7 +52,7 @@ def run(source_dir, target_dir,
                  f'source_train_images: {target_train_images}, source_train_labels: {target_train_labels}, '
                  f'target_val_images: {target_val_images}, target_val_labels: {target_val_labels}, '
                  f'train_batch_size: {train_batch_size}, val_batch_size: {val_batch_size}, '
-                 f'image_height: {image_height}, image_width: {image_width}, '
+                 f'image_height: {image_height}, image_width: {image_width}, num_workers: {num_workers}, '
                  f'backbone: {backbone}, classification_head: {classification_head}, pretrained_backbone: {pretrained_backbone}, '
                  f'da_injection_point: {da_injection_point}, lambda_da: {lambda_da}, '
                  f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
@@ -103,13 +103,13 @@ def run(source_dir, target_dir,
                             mean=CITYSCAPES_MEAN, std=CITYSCAPES_STD, label2train=CITYSCAPES_LABELS2TRAIN)
 
     source_train_dataloader = DataLoader(source_train_dataset, batch_size=train_batch_size,
-                                shuffle=True, pin_memory=cuda_status, drop_last=True)
+                                shuffle=True, pin_memory=cuda_status, drop_last=True, num_workers=num_workers)
     target_train_dataloader = DataLoader(target_train_dataset, batch_size=train_batch_size,
-                                shuffle=True, pin_memory=cuda_status, drop_last=True)
+                                shuffle=True, pin_memory=cuda_status, drop_last=True, num_workers=num_workers)
     source_val_dataloader = DataLoader(source_val_dataset, batch_size=val_batch_size, 
-                                shuffle=True, pin_memory=cuda_status, drop_last=True)
+                                shuffle=True, pin_memory=cuda_status, drop_last=True, num_workers=num_workers)
     target_val_dataloader = DataLoader(target_val_dataset, batch_size=val_batch_size, 
-                                shuffle=True, pin_memory=cuda_status, drop_last=True)
+                                shuffle=True, pin_memory=cuda_status, drop_last=True, num_workers=num_workers)
 
     inf_source_train_dataloader = inf_iter(source_train_dataloader)
     inf_target_train_dataloader = inf_iter(target_train_dataloader)

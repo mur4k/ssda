@@ -55,8 +55,8 @@ slurm:
   sbatch_options:
     gres: gpu:1       # num GPUs
     mem: 16G          # memory
-    cpus-per-task: 1  # num cores
-    time: 10-00:00     # max time, D-HH:MM
+    cpus-per-task: 4  # num cores
+    time: 5-00:00     # max time, D-HH:MM
 
 ###### BEGIN PARAMETER CONFIGURATION ######
 
@@ -77,10 +77,11 @@ fixed:
   target_val_labels: cityscapes_labels_val.txt 
   train_batch_size: 2
   val_batch_size: 2
-  image_height: 512
-  image_width: 1024
+  image_height: 480
+  image_width: 640
+  num_workers: 4
   # network params
-  backbone: resnet101
+  backbone: resnet50
   classification_head: deeplabv3
   pretrained_backbone: True
   da_injection_point: output
@@ -93,7 +94,7 @@ fixed:
   learning_rate_da: 0.0001
   betas_da: [0.9, 0.99]
   # training loop params
-  max_iter: 100000
+  max_iter: 50000
   epoch_to_resume: 0
   batches_to_eval_train: 5
   batches_to_visualize: 5

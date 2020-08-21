@@ -41,11 +41,13 @@ def one_hot(labels: torch.Tensor,
         raise ValueError("The number of classes must be bigger than one."
                          " Got: {}".format(num_classes))
     mask = labels.eq(ignore_index)
-    labels_with_ignored_idx = torch.masked_fill(labels, mask, num_classes+1)
+    labels_with_ignored_idx = torch.masked_fill(labels, mask, num_classes)
     shape = labels_with_ignored_idx.shape
     one_hot = torch.zeros(shape[0], num_classes+1, *shape[1:],
                           device=device, dtype=dtype)
-    return one_hot.scatter_(1, labels.unsqueeze(1), 1.0)[:, :-1, :, :] + eps
+    one_hot.scatter_(1, labels_with_ignored_idx.unsqueeze(1), 1.0)
+    one_hot  = one_hot[:, :-1] + eps
+    return one_hot
 
 
 # based on:
@@ -111,9 +113,11 @@ class FocalLoss(nn.Module):
         input_soft = F.softmax(input, dim=1) + self.eps
 
         # create the labels one hot tensor
-        target_one_hot = one_hot(target, self.ignore_index, 
+        target_one_hot = one_hot(labels=target, 
+                                 ignore_index=self.ignore_index, 
                                  num_classes=input.shape[1],
-                                 device=input.device, dtype=input.dtype)
+                                 device=input.device, 
+                                 dtype=input.dtype)
 
         # compute the actual focal loss
         weight = torch.pow(1. - input_soft, self.gamma)

@@ -82,6 +82,8 @@ fixed:
   backbone: resnet101
   classification_head: deeplabv3
   pretrained_backbone: True
+  segmentation_loss: ce         #  [ce, focal]
+  gamma: 0.0                    #  only used if segmentation_loss is focal
   # optim params
   learning_rate: 0.00025
   momentum: 0.9

@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import models
 
 from utils.utils import *
+from losses.losses import *
 from datasets.datasets import SegmentationDataSet
 from datasets.data_constants import *
 from models.discriminator import FCDiscriminator, Discriminator
@@ -37,6 +38,7 @@ def run(source_dir, target_dir,
     train_batch_size, val_batch_size,
     image_height, image_width, num_workers,
     backbone, classification_head, pretrained_backbone, 
+    segmentation_loss, gamma,
     da_injection_point, lambda_da,
     learning_rate, momentum, weight_decay,
     learning_rate_da, betas_da,    
@@ -54,6 +56,7 @@ def run(source_dir, target_dir,
                  f'train_batch_size: {train_batch_size}, val_batch_size: {val_batch_size}, '
                  f'image_height: {image_height}, image_width: {image_width}, num_workers: {num_workers}, '
                  f'backbone: {backbone}, classification_head: {classification_head}, pretrained_backbone: {pretrained_backbone}, '
+                 f'segmentation_loss: {segmentation_loss}, gamma: {gamma}, '
                  f'da_injection_point: {da_injection_point}, lambda_da: {lambda_da}, '
                  f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
                  f'learning_rate_da: {learning_rate_da}, betas_da: {betas_da}, '
@@ -70,6 +73,7 @@ def run(source_dir, target_dir,
         classification_head,
         str(image_height) + 'x' + str(image_width),
         ('IN' if pretrained_backbone else ''),
+        segmentation_loss,
         da_injection_point,
         'lr{:.1e}_lrda{:.1e}_m{:.1e}_wd{:.1e}_lrsp{:.1e}'.format(learning_rate, learning_rate_da, momentum, weight_decay, lrs_power)
         ])
@@ -120,6 +124,7 @@ def run(source_dir, target_dir,
 
     #  initialize the model and the loss
     logging.info('Initializing models&losses')
+    #  segmentation model
     seg_model_name =  classification_head + '_' + backbone
     seg_model_loader = getattr(models.segmentation, seg_model_name)
     seg_model = seg_model_loader(pretrained=False, 
@@ -127,11 +132,30 @@ def run(source_dir, target_dir,
                     progress=False,
                     aux_loss=False,
                     pretrained_backbone=pretrained_backbone)
-    seg_loss = torch.nn.CrossEntropyLoss(ignore_index=255)
-    discriminator_config = {
-        'input_dim': NUM_CLASSES if da_injection_point=='output' else 2048,
-        'ndf': 64 if da_injection_point=='output' else 256,
-    }
+    if segmentation_loss == 'ce':
+        seg_loss = torch.nn.CrossEntropyLoss(ignore_index=255)
+    elif segmentation_loss == 'focal':
+        seg_loss = FocalLoss(alpha=1.0, 
+                    gamma=gamma, 
+                    ignore_index=255,
+                    reduction='mean')
+    else:
+        raise ValueError("There are two losses currently supported: [ce, focal]. "
+                         "Got: {}".format(segmentation_loss))
+    #  domain discriminator
+    if da_injection_point == 'output':
+        discriminator_config = {
+            'input_dim': NUM_CLASSES,
+            'ndf': 64,
+        }
+    elif da_injection_point == 'feature':
+        discriminator_config = {
+            'input_dim': 2048,
+            'ndf': 256,
+        }
+    else:
+        raise ValueError("There are two injection points currently supported: [output, feature]. "
+                         "Got: {}".format(da_injection_point))
     discr_model = Discriminator(**discriminator_config)
     discr_loss = torch.nn.BCEWithLogitsLoss()
 
@@ -224,7 +248,7 @@ def run(source_dir, target_dir,
         #  forward pass dicriminator to compute fake_loss
         if da_injection_point == 'output':
             da_output = discr_model(output)
-        else:
+        elif da_injection_point == 'feature':
             da_output = discr_model(features['out'])
 
         #  backprop encoder + segmentation
@@ -238,7 +262,7 @@ def run(source_dir, target_dir,
         discr_model.zero_grad()
         if da_injection_point == 'output':
             da_output = discr_model(output.detach())
-        else:
+        elif da_injection_point == 'feature':
             da_output = discr_model(features['out'].detach())
 
         #  backprop discriminator
@@ -270,7 +294,7 @@ def run(source_dir, target_dir,
                 param.requires_grad = True
         if da_injection_point == 'output':
             da_output = discr_model(output.detach())
-        else:
+        elif da_injection_point == 'feature':
             da_output = discr_model(features['out'].detach())
 
         #  backprop discriminator

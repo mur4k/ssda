@@ -84,7 +84,9 @@ fixed:
   backbone: resnet50
   classification_head: deeplabv3
   pretrained_backbone: True
-  da_injection_point: output
+  segmentation_loss: ce         #  [ce, focal]
+  gamma: 0.0                    #  only used if segmentation_loss is focal
+  da_injection_point: output    #  [output, feature]
   lambda_da: 0.001
   # optim params
   learning_rate: 0.00025

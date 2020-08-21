@@ -35,6 +35,7 @@ def run(source_dir, target_dir,
     train_batch_size, val_batch_size,
     image_height, image_width, num_workers, 
     backbone, classification_head, pretrained_backbone, 
+    segmentation_loss, gamma,
     learning_rate, momentum, weight_decay,
     max_iter, epoch_to_resume, lrs_power,
     batches_to_eval_train, batches_to_visualize, 
@@ -49,6 +50,7 @@ def run(source_dir, target_dir,
                  f'train_batch_size: {train_batch_size}, val_batch_size: {val_batch_size}, '
                  f'image_height: {image_height}, image_width: {image_width}, num_workers: {num_workers}, '
                  f'backbone: {backbone}, classification_head: {classification_head}, pretrained_backbone: {pretrained_backbone}, '
+                 f'segmentation_loss: {segmentation_loss}, gamma: {gamma}, '
                  f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
                  f'max_iter: {max_iter}, epoch_to_resume: {epoch_to_resume}, lrs_power: {lrs_power}, '
                  f'batches_to_eval_train: {batches_to_eval_train}, batches_to_visualize: {batches_to_visualize}, '
@@ -110,7 +112,15 @@ def run(source_dir, target_dir,
                     progress=False,
                     aux_loss=False,
                     pretrained_backbone=pretrained_backbone)
-    seg_loss = torch.nn.CrossEntropyLoss(ignore_index=255)
+    if segmentation_loss == 'ce':
+        seg_loss = torch.nn.CrossEntropyLoss(ignore_index=255)
+    elif segmentation_loss == 'focal':
+        seg_loss = FocalLoss(alpha=1.0, 
+                    gamma=gamma, 
+                    ignore_index=255,
+                    reduction='mean')
+    else:
+        raise ValueError("There are only two losses currently supported: [ce, focal]. Got: {}".format(segmentation_loss))
 
     #  initialize the optimizer 
     #  we use different lrs for the classifier and the backbone if the latter one is pretrained

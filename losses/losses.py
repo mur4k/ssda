@@ -46,7 +46,7 @@ def one_hot(labels: torch.Tensor,
     one_hot = torch.zeros(shape[0], num_classes+1, *shape[1:],
                           device=device, dtype=dtype)
     one_hot.scatter_(1, labels_with_ignored_idx.unsqueeze(1), 1.0)
-    one_hot  = one_hot[:, :-1] + eps
+    one_hot  = one_hot[:, :-1]
     return one_hot
 
 
@@ -90,7 +90,7 @@ class FocalLoss(nn.Module):
         self.gamma: Optional[float] = gamma
         self.reduction: Optional[str] = reduction
         self.ignore_index: int = ignore_index
-        self.eps: float = 1e-6
+        self.eps: float = 1e-8
 
     def forward(
             self,
@@ -110,7 +110,7 @@ class FocalLoss(nn.Module):
                 "input and target must be in the same device. Got: {}" .format(\
                     input.device, target.device))
         # compute softmax over the classes axis
-        input_soft = F.softmax(input, dim=1) + self.eps
+        input_soft = F.softmax(input, dim=1)
 
         # create the labels one hot tensor
         target_one_hot = one_hot(labels=target, 
@@ -120,8 +120,8 @@ class FocalLoss(nn.Module):
                                  dtype=input.dtype)
 
         # compute the actual focal loss
-        weight = torch.pow(1. - input_soft, self.gamma)
-        focal = -self.alpha * weight * torch.log(input_soft)
+        weight = torch.pow(1. - input_soft + self.eps, self.gamma)
+        focal = - self.alpha * weight * torch.log(input_soft + self.eps)
         loss_tmp = torch.sum(target_one_hot * focal, dim=1)
 
         loss = -1

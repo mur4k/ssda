@@ -223,7 +223,7 @@ def run(source_dir, target_dir,
                           max_epochs*len(source_train_dataloader)):
         if num_iter % len(source_train_dataloader) == 0:
             epoch = num_iter // len(source_train_dataloader)
-            logging.info('Epoch: {}'.format(epoch))
+            logging.info(f'Epoch: {epoch}/{max_epochs}')
         batch_idx = num_iter % len(source_train_dataloader)
         
         #  zero the parameter gradients

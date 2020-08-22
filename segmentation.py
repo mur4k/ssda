@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import models
 
+from losses.losses import *
 from utils.utils import *
 from datasets.datasets import SegmentationDataSet
 from datasets.data_constants import *
@@ -65,7 +66,9 @@ def run(source_dir, target_dir,
         classification_head,
         str(image_height) + 'x' + str(image_width),
         ('IN' if pretrained_backbone else ''),
-        'lr{:.3e}_m{:.3e}_wd{:.3e}_lrsp{:.1e}'.format(learning_rate, momentum, weight_decay, lrs_power)
+        segmentation_loss,
+        'gamma{:.1e}_lr{:.1e}_m{:.1e}_wd{:.1e}_lrsp{:.1e}'.format(
+            gamma, learning_rate, momentum, weight_decay, lrs_power)
         ])
     start_epoch = 0
     if seed > 0:

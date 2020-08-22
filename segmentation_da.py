@@ -75,7 +75,8 @@ def run(source_dir, target_dir,
         ('IN' if pretrained_backbone else ''),
         segmentation_loss,
         da_injection_point,
-        'lr{:.1e}_lrda{:.1e}_m{:.1e}_wd{:.1e}_lrsp{:.1e}'.format(learning_rate, learning_rate_da, momentum, weight_decay, lrs_power)
+        'gamma{:.1e}_lr{:.1e}_lrda{:.1e}_m{:.1e}_wd{:.1e}_lrsp{:.1e}'.format(
+            gamma, learning_rate, learning_rate_da, momentum, weight_decay, lrs_power)
         ])
     start_epoch = 0
     if seed > 0:

@@ -75,8 +75,8 @@ def run(source_dir, target_dir,
         ('IN' if pretrained_backbone else ''),
         segmentation_loss,
         da_injection_point,
-        'gamma{:.1e}_lr{:.1e}_lrda{:.1e}_m{:.1e}_wd{:.1e}_lrsp{:.1e}'.format(
-            gamma, learning_rate, learning_rate_da, momentum, weight_decay, lrs_power)
+        'gamma{:.1e}_lmbdda{:.1e}_lr{:.1e}_lrda{:.1e}_m{:.1e}_wd{:.1e}_lrsp{:.1e}'.format(
+            gamma, lambda_da, learning_rate, learning_rate_da, momentum, weight_decay, lrs_power)
         ])
     start_epoch = 0
     if seed > 0:
@@ -246,7 +246,7 @@ def run(source_dir, target_dir,
         output = F.interpolate(output, image_size, 
                     mode='bilinear', align_corners=False)
 
-        #  forward pass dicriminator to compute fake_loss
+        #  forward pass dicriminator to compute fake loss
         if da_injection_point == 'output':
             da_output = discr_model(output)
         elif da_injection_point == 'feature':

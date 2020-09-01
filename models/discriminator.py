@@ -10,7 +10,7 @@ class FCDiscriminator(nn.Module):
         self.conv2 = nn.Conv2d(ndf, ndf*2, kernel_size=4, stride=2, padding=1)
         self.conv3 = nn.Conv2d(ndf*2, ndf*4, kernel_size=4, stride=2, padding=1)
         self.conv4 = nn.Conv2d(ndf*4, ndf*8, kernel_size=4, stride=2, padding=1)
-        self.classifier = nn.Conv2d(ndf*8, 1, kernel_size=4, stride=2, padding=1)
+        self.classifier = nn.Conv2d(ndf*8, 1, kernel_size=4, stride=1, padding=1)
 
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
         #self.up_sample = nn.Upsample(scale_factor=32, mode='bilinear')

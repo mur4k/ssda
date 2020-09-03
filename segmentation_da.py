@@ -14,7 +14,7 @@ from utils.utils import *
 from losses.losses import *
 from datasets.datasets import SegmentationDataSet
 from datasets.data_constants import *
-from models.discriminator import FCDiscriminator, Discriminator
+from models.discriminator import FCDiscriminator, FCDiscriminatorBatchNorm
 
 ex = Experiment()
 seml.experiment.setup_logger(ex)
@@ -157,7 +157,7 @@ def run(source_dir, target_dir,
     else:
         raise ValueError("There are two injection points currently supported: [output, feature]. "
                          "Got: {}".format(da_injection_point))
-    discr_model = Discriminator(**discriminator_config)
+    discr_model = FCDiscriminatorBatchNorm(**discriminator_config)
     discr_loss = torch.nn.BCEWithLogitsLoss()
 
     #  initialize the optimizers 

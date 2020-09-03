@@ -44,9 +44,9 @@
 
 
 seml:
-  name: segmentation_da
+  name: segmentation_loss_ablation
   project_root_dir: /nfs/homedirs/mirlas/ssda
-  executable: segmentation_da.py
+  executable: segmentation.py
   conda_environment: ssda
   output_dir: /nfs/homedirs/mirlas/ssda/slurm-output/
 
@@ -56,7 +56,7 @@ slurm:
     gres: gpu:1       # num GPUs
     mem: 16G          # memory
     cpus-per-task: 4  # num cores
-    time: 5-00:00     # max time, D-HH:MM
+    time: 10-00:00    # max time, D-HH:MM
 
 ###### BEGIN PARAMETER CONFIGURATION ######
 
@@ -69,38 +69,47 @@ fixed:
   pred_dir: /nfs/students/mirlas/predictions/seg_da/
   source_train_images: gta5_images_train.txt
   source_train_labels: gta5_labels_train.txt
-  target_train_images: cityscapes_images_train.txt
-  target_train_labels: cityscapes_labels_train.txt
   source_val_images: gta5_images_val.txt
   source_val_labels: gta5_labels_val.txt
   target_val_images: cityscapes_images_val.txt
   target_val_labels: cityscapes_labels_val.txt 
   train_batch_size: 2
   val_batch_size: 2
-  image_height: 480
-  image_width: 640
+  image_height: 400
+  image_width: 800
   num_workers: 4
   # network params
   backbone: resnet50
-  classification_head: deeplabv3
+  classification_head: fcn
   pretrained_backbone: True
-  segmentation_loss: ce         #  [ce, focal]
-  gamma: 0.0                    #  only used if segmentation_loss is focal
-  da_injection_point: output    #  [output, feature]
-  lambda_da: 0.001
   # optim params
   learning_rate: 0.00025
   momentum: 0.9
   weight_decay: 0.0005
   lrs_power: 0.9
-  learning_rate_da: 0.0001
-  betas_da: [0.9, 0.99]
   # training loop params
-  max_iter: 50000
+  max_iter: 200000
   epoch_to_resume: 0
   batches_to_eval_train: 5
   batches_to_visualize: 5
   points_to_sample: 1000
-  save_step: 5
+  save_step: 10
   display_step: 100
   seed: 42
+
+ce_loss:
+  fixed:
+    segmentation_loss: ce         #  [ce, focal]
+    gamma: 0.0                    #  only used if segmentation_loss is focal
+
+focal_loss:
+  fixed:
+    segmentation_loss: focal      #  [ce, focal]
+  grid:
+    gamma:                        #  only used if segmentation_loss is focal
+      type: choice
+      options:
+        - 0.5
+        - 1.0
+        - 2.0
+        - 5.0

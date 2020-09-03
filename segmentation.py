@@ -150,8 +150,8 @@ def run(source_dir, target_dir,
             optimizer.load_state_dict(checkpoint['optimizer'])
         if 'scheduler' in checkpoint:
             scheduler.load_state_dict(checkpoint['scheduler'])
-        if 'curr_epoch' in checkpoint:
-            start_epoch = checkpoint['curr_epoch']
+        if 'epoch' in checkpoint:
+            start_epoch = checkpoint['epoch'] + 1
         if 'loss' in checkpoint:
             loss = checkpoint['loss']
 

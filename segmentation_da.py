@@ -195,8 +195,8 @@ def run(source_dir, target_dir,
             scheduler.load_state_dict(checkpoint['scheduler'])
         if 'discr_scheduler' in checkpoint:
             scheduler.load_state_dict(checkpoint['discr_scheduler'])
-        if 'curr_epoch' in checkpoint:
-            start_epoch = checkpoint['curr_epoch']
+        if 'epoch' in checkpoint:
+            start_epoch = checkpoint['epoch'] + 1
 
     #  move everything to a device before training
     logging.info('Transfer models&optimizer to a device')

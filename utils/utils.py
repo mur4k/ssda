@@ -141,8 +141,14 @@ def create_embeddings(writer, inf_src_dataloader, inf_tar_dataloader, seg_model,
     writer.add_embedding(all_features, metadata=all_labels, metadata_header=['gt', 'domain'])
 
 def transfer_model_and_optimizer(model, optimizer, device):
+    transfer_optimizer(optimizer, device)
+    transfer_model(model, device)
+
+def transfer_optimizer(optimizer, device):
     for state in optimizer.state.values():
         for k, v in state.items():
             if isinstance(v, torch.Tensor):
                 state[k] = v.to(device)
+    
+def transfer_model(model, device):
     model = model.to(device)

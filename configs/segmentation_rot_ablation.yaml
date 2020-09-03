@@ -79,7 +79,7 @@ fixed:
   val_batch_size: 2
   image_height: 400
   image_width: 800
-  size_crop
+  size_crop: 256
   num_workers: 4
   # network params
   backbone: resnet50

@@ -112,6 +112,6 @@ grid:
   lambda_da:
     type: choice
     options:
-      - 0.005
-      - 0.05
-      - 0.5
+      - 0.001
+      - 0.01
+      - 0.1

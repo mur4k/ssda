@@ -29,7 +29,7 @@ def config():
 
 @ex.automain
 def run(source_dir, target_dir, 
-    snapshots_dir, log_dir, pred_dir,
+    snapshots_dir, log_dir, pred_dir, load_checkpoint,
     source_train_images, source_train_labels, 
     source_val_images, source_val_labels, 
     target_val_images, target_val_labels, 
@@ -38,13 +38,13 @@ def run(source_dir, target_dir,
     backbone, classification_head, pretrained_backbone, 
     segmentation_loss, gamma,
     learning_rate, momentum, weight_decay,
-    max_iter, epoch_to_resume, lrs_power,
+    max_iter, lrs_power,
     batches_to_eval_train, batches_to_visualize, 
     points_to_sample, save_step, display_step, seed):
 
     logging.info('Received the following configuration:')
     logging.info(f'Source_dir: {source_dir}, target_dir: {target_dir}, '
-                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}, '
+                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}, load_checkpoint: {load_checkpoint}, '
                  f'source_train_images: {source_train_images}, source_train_labels: {source_train_labels}, '
                  f'source_val_images: {source_val_images}, source_val_labels: {source_val_labels}, '
                  f'target_val_images: {target_val_images}, target_val_labels: {target_val_labels}, '
@@ -53,7 +53,7 @@ def run(source_dir, target_dir,
                  f'backbone: {backbone}, classification_head: {classification_head}, pretrained_backbone: {pretrained_backbone}, '
                  f'segmentation_loss: {segmentation_loss}, gamma: {gamma}, '
                  f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
-                 f'max_iter: {max_iter}, epoch_to_resume: {epoch_to_resume}, lrs_power: {lrs_power}, '
+                 f'max_iter: {max_iter}, lrs_power: {lrs_power}, '
                  f'batches_to_eval_train: {batches_to_eval_train}, batches_to_visualize: {batches_to_visualize}, '
                  f'points_to_sample: {points_to_sample}, save_step:{save_step}, display_step: {display_step}, seed: {seed}')
     
@@ -141,9 +141,8 @@ def run(source_dir, target_dir,
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_poly, last_epoch=-1)
 
     #  reinitialize if nesseccary
-    checkpoint_path = os.path.join(snapshots_dir, model_name, 'checkpoint_{}.pth'.format(epoch_to_resume))
-    if os.path.isfile(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
+    if os.path.isfile(load_checkpoint):
+        checkpoint = torch.load(load_checkpoint)
         if 'seg_model' in checkpoint:
             seg_model.load_state_dict(checkpoint['seg_model'])
         if 'optimizer' in checkpoint:

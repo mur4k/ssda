@@ -30,7 +30,7 @@ def config():
 
 @ex.automain
 def run(source_dir, target_dir, 
-    snapshots_dir, log_dir, pred_dir,
+    snapshots_dir, log_dir, pred_dir, load_checkpoint,
     source_train_images, source_train_labels, 
     source_val_images, source_val_labels, 
     target_train_images, target_train_labels, 
@@ -42,13 +42,13 @@ def run(source_dir, target_dir,
     da_injection_point, lambda_da,
     learning_rate, momentum, weight_decay,
     learning_rate_da, betas_da,    
-    max_iter, epoch_to_resume, lrs_power,
+    max_iter, lrs_power,
     batches_to_eval_train, batches_to_visualize, 
     points_to_sample, save_step, display_step, seed):
 
     logging.info('Received the following configuration:')
     logging.info(f'Source_dir: {source_dir}, target_dir: {target_dir}, '
-                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}, ' 
+                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}, load_checkpoint: {load_checkpoint}, '
                  f'source_train_images: {source_train_images}, source_train_labels: {source_train_labels}, '
                  f'source_val_images: {source_val_images}, source_val_labels: {source_val_labels}, '
                  f'source_train_images: {target_train_images}, source_train_labels: {target_train_labels}, '
@@ -60,7 +60,7 @@ def run(source_dir, target_dir,
                  f'da_injection_point: {da_injection_point}, lambda_da: {lambda_da}, '
                  f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
                  f'learning_rate_da: {learning_rate_da}, betas_da: {betas_da}, '
-                 f'max_iter: {max_iter}, epoch_to_resume: {epoch_to_resume}, lrs_power: {lrs_power}, '
+                 f'max_iter: {max_iter}, lrs_power: {lrs_power}, '
                  f'batches_to_eval_train: {batches_to_eval_train}, batches_to_visualize: {batches_to_visualize}, '
                  f'points_to_sample: {points_to_sample}, save_step:{save_step}, display_step: {display_step}, seed: {seed}')
     
@@ -180,9 +180,8 @@ def run(source_dir, target_dir,
     discr_scheduler = torch.optim.lr_scheduler.LambdaLR(discr_optimizer, lr_lambda=lr_poly, last_epoch=-1)
 
     #  reinitialize if nesseccary
-    checkpoint_path = os.path.join(snapshots_dir, model_name, 'checkpoint_{}.pth'.format(epoch_to_resume))
-    if os.path.isfile(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
+    if os.path.isfile(load_checkpoint):
+        checkpoint = torch.load(load_checkpoint)
         if 'seg_model' in checkpoint:
             seg_model.load_state_dict(checkpoint['seg_model'])
         if 'discr_model' in checkpoint:
@@ -194,7 +193,7 @@ def run(source_dir, target_dir,
         if 'scheduler' in checkpoint:
             scheduler.load_state_dict(checkpoint['scheduler'])
         if 'discr_scheduler' in checkpoint:
-            scheduler.load_state_dict(checkpoint['discr_scheduler'])
+            discr_scheduler.load_state_dict(checkpoint['discr_scheduler'])
         if 'epoch' in checkpoint:
             start_epoch = checkpoint['epoch'] + 1
 
@@ -401,7 +400,7 @@ def run(source_dir, target_dir,
                     'optimizer': optimizer.state_dict(),
                     'discr_optimizer': discr_optimizer.state_dict(),
                     'scheduler': scheduler.state_dict(),
-                    'discr_scheduler': discr_scheduler.step(),
+                    'discr_scheduler': discr_scheduler.state_dict(),
                     'epoch': epoch}, save_path)
         
     #  evaluate the model

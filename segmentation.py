@@ -142,6 +142,7 @@ def run(source_dir, target_dir,
 
     #  reinitialize if nesseccary
     if os.path.isfile(load_checkpoint):
+        logging.info('Loading the checkpoint')
         checkpoint = torch.load(load_checkpoint)
         if 'seg_model' in checkpoint:
             seg_model.load_state_dict(checkpoint['seg_model'])

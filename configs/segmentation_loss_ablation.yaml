@@ -67,6 +67,7 @@ fixed:
   snapshots_dir: /nfs/students/mirlas/snapshots/seg_da/
   log_dir: /nfs/students/mirlas/logdir/seg_da/
   pred_dir: /nfs/students/mirlas/predictions/seg_da/
+  load_checkpoint: ''
   source_train_images: gta5_images_train.txt
   source_train_labels: gta5_labels_train.txt
   source_val_images: gta5_images_val.txt
@@ -89,7 +90,6 @@ fixed:
   lrs_power: 0.9
   # training loop params
   max_iter: 200000
-  epoch_to_resume: 0
   batches_to_eval_train: 5
   batches_to_visualize: 5
   points_to_sample: 1000

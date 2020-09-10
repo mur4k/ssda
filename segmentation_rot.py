@@ -188,6 +188,7 @@ def run(source_dir, target_dir,
     #  reinitialize if nesseccary
     checkpoint_path = os.path.join(snapshots_dir, model_name, 'checkpoint_{}.pth'.format(epoch_to_resume))
     if os.path.isfile(checkpoint_path):
+        logging.info('Loading the checkpoint')
         checkpoint = torch.load(checkpoint_path)
         if 'seg_model' in checkpoint:
             seg_model.load_state_dict(checkpoint['seg_model'])

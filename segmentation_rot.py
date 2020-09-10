@@ -41,8 +41,8 @@ def run(source_dir, target_dir,
     backbone, classification_head, pretrained_backbone, 
     segmentation_loss, gamma,
     aux_injection_point, lambda_aux,
-    learning_rate, momentum, 
-    weight_decay, learning_rate_aux, 
+    learning_rate, momentum, weight_decay, 
+    learning_rate_aux, betas_aux,
     max_iter, epoch_to_resume, lrs_power,
     batches_to_eval_train, batches_to_visualize, 
     points_to_sample, save_step, display_step, seed):
@@ -60,8 +60,8 @@ def run(source_dir, target_dir,
                  f'backbone: {backbone}, classification_head: {classification_head}, pretrained_backbone: {pretrained_backbone}, '
                  f'segmentation_loss: {segmentation_loss}, gamma: {gamma}, '
                  f'aux_injection_point: {aux_injection_point}, lambda_aux: {lambda_aux}, '
-                 f'learning_rate: {learning_rate}, momentum: {momentum}, '
-                 f'weight_decay: {weight_decay}, learning_rate_aux: {learning_rate_aux}, '
+                 f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
+                 f'learning_rate_aux: {learning_rate_aux}, betas_aux: {betas_aux}, '
                  f'max_iter: {max_iter}, epoch_to_resume: {epoch_to_resume}, lrs_power: {lrs_power}, '
                  f'batches_to_eval_train: {batches_to_eval_train}, batches_to_visualize: {batches_to_visualize}, '
                  f'points_to_sample: {points_to_sample}, save_step:{save_step}, display_step: {display_step}, seed: {seed}')
@@ -172,16 +172,18 @@ def run(source_dir, target_dir,
     optimizer = torch.optim.SGD([{'params': seg_model.backbone.parameters(), 
                                   'lr':learning_rate},
                                  {'params': seg_model.classifier.parameters(), 
-                                  'lr':learning_rate * (10 if pretrained_backbone else 1)},
-                                 {'params': aux_model.parameters(),
-                                  'lr': learning_rate_aux}],
+                                  'lr':learning_rate * (10 if pretrained_backbone else 1)}],
                                 lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     optimizer.zero_grad()
+    aux_optimizer = torch.optim.Adam(aux_model.parameters(),
+                            lr=learning_rate_aux, betas=betas_aux)
+    aux_optimizer.zero_grad()
 
     #  initialize the learning rate scheduler
     logging.info('Initializing lr schedulers')
     lr_poly = lambda epoch: (1 - epoch / max_epochs) ** lrs_power
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_poly, last_epoch=-1)
+    aux_scheduler = torch.optim.lr_scheduler.LambdaLR(aux_optimizer, lr_lambda=lr_poly, last_epoch=-1)
 
     #  reinitialize if nesseccary
     checkpoint_path = os.path.join(snapshots_dir, model_name, 'checkpoint_{}.pth'.format(epoch_to_resume))
@@ -193,15 +195,19 @@ def run(source_dir, target_dir,
             aux_model.load_state_dict(checkpoint['aux_model'])
         if 'optimizer' in checkpoint:
             optimizer.load_state_dict(checkpoint['optimizer'])
+        if 'aux_optimizer' in checkpoint:
+            aux_optimizer.load_state_dict(checkpoint['aux_optimizer'])
         if 'scheduler' in checkpoint:
             scheduler.load_state_dict(checkpoint['scheduler'])
+        if 'aux_scheduler' in checkpoint:
+            aux_scheduler.load_state_dict(checkpoint['aux_scheduler'])
         if 'epoch' in checkpoint:
             start_epoch = checkpoint['epoch'] + 1
 
     #  move everything to a device before training
     logging.info('Transfer models&optimizers to a device')
     transfer_model_and_optimizer(seg_model, optimizer, device)
-    transfer_model(aux_model, device)
+    transfer_model_and_optimizer(aux_model, aux_optimizer, device)
 
     #  initialize the SummaryWriter
     logging.info('Initializing the SummaryWriter')
@@ -228,6 +234,7 @@ def run(source_dir, target_dir,
         
         #  zero the parameter gradients
         optimizer.zero_grad()
+        aux_optimizer.zero_grad()
             
         #  forward pass TARGET image
         #  load target data
@@ -269,6 +276,7 @@ def run(source_dir, target_dir,
         src_seg_loss.backward()
 
         optimizer.step()
+        aux_optimizer.step()
         
         #  update metrics
         with torch.no_grad():
@@ -350,6 +358,7 @@ def run(source_dir, target_dir,
             #  decay lr
             logging.info('LR update')
             scheduler.step()
+            aux_scheduler.step()
 
             #  save the model    
             if (epoch + 1) % save_step == 0:
@@ -359,7 +368,9 @@ def run(source_dir, target_dir,
                     'seg_model': seg_model.state_dict(),
                     'aux_model': aux_model.state_dict(),
                     'optimizer': optimizer.state_dict(),
+                    'aux_optimizer': aux_optimizer.state_dict(),
                     'scheduler': scheduler.state_dict(),
+                    'aux_scheduler': aux_scheduler.state_dict(),
                     'epoch': epoch}, save_path)
         
     #  evaluate the model

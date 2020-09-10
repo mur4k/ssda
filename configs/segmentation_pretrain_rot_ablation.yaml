@@ -44,7 +44,7 @@
 
 
 seml:
-  name: segmentation_rot_ablation
+  name: segmentation_pretrain_rot_ablation
   project_root_dir: /nfs/homedirs/mirlas/ssda
   executable: /nfs/homedirs/mirlas/ssda/segmentation_rot.py
   conda_environment: ssda
@@ -64,10 +64,10 @@ fixed:
   # data params
   source_dir: /nfs/students/mirlas/data/
   target_dir: /nfs/students/mirlas/data/
-  snapshots_dir: /nfs/students/mirlas/snapshots/seg_rot/
-  log_dir: /nfs/students/mirlas/logdir/seg_rot/
-  pred_dir: /nfs/students/mirlas/predictions/seg_rot/
-  load_checkpoint: ''
+  snapshots_dir: /nfs/students/mirlas/snapshots/seg_pretr_rot/
+  log_dir: /nfs/students/mirlas/logdir/seg_pretr_rot/
+  pred_dir: /nfs/students/mirlas/predictions/seg_pretr_rot/
+  load_checkpoint: '/nfs/students/mirlas/snapshots/seg/resnet50_fcn_400x800_IN_ce_gamma0.0e+00_lr2.5e-04_m9.0e-01_wd5.0e-04_lrsp9.0e-01/checkpoint_10.pth'
   source_train_images: gta5_images_train.txt
   source_train_labels: gta5_labels_train.txt
   target_train_images: cityscapes_images_train.txt

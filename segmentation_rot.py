@@ -30,7 +30,7 @@ def config():
 
 @ex.automain
 def run(source_dir, target_dir, 
-    snapshots_dir, log_dir, pred_dir,
+    snapshots_dir, log_dir, pred_dir, load_checkpoint,
     source_train_images, source_train_labels, 
     source_val_images, source_val_labels, 
     target_train_images, target_train_labels, 
@@ -43,13 +43,13 @@ def run(source_dir, target_dir,
     aux_injection_point, lambda_aux,
     learning_rate, momentum, weight_decay, 
     learning_rate_aux, betas_aux,
-    max_iter, epoch_to_resume, lrs_power,
+    max_iter, lrs_power,
     batches_to_eval_train, batches_to_visualize, 
     points_to_sample, save_step, display_step, seed):
 
     logging.info('Received the following configuration:')
     logging.info(f'Source_dir: {source_dir}, target_dir: {target_dir}, '
-                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}, ' 
+                 f'snapshots_dir: {snapshots_dir}, log_dir: {log_dir}, pred_dir: {pred_dir}, load_checkpoint: {load_checkpoint}, '
                  f'source_train_images: {source_train_images}, source_train_labels: {source_train_labels}, '
                  f'source_val_images: {source_val_images}, source_val_labels: {source_val_labels}, '
                  f'source_train_images: {target_train_images}, source_train_labels: {target_train_labels}, '
@@ -62,7 +62,7 @@ def run(source_dir, target_dir,
                  f'aux_injection_point: {aux_injection_point}, lambda_aux: {lambda_aux}, '
                  f'learning_rate: {learning_rate}, momentum: {momentum}, weight_decay: {weight_decay}, '
                  f'learning_rate_aux: {learning_rate_aux}, betas_aux: {betas_aux}, '
-                 f'max_iter: {max_iter}, epoch_to_resume: {epoch_to_resume}, lrs_power: {lrs_power}, '
+                 f'max_iter: {max_iter}, lrs_power: {lrs_power}, '
                  f'batches_to_eval_train: {batches_to_eval_train}, batches_to_visualize: {batches_to_visualize}, '
                  f'points_to_sample: {points_to_sample}, save_step:{save_step}, display_step: {display_step}, seed: {seed}')
     
@@ -186,9 +186,9 @@ def run(source_dir, target_dir,
     aux_scheduler = torch.optim.lr_scheduler.LambdaLR(aux_optimizer, lr_lambda=lr_poly, last_epoch=-1)
 
     #  reinitialize if nesseccary
-    checkpoint_path = os.path.join(snapshots_dir, model_name, 'checkpoint_{}.pth'.format(epoch_to_resume))
-    if os.path.isfile(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
+    if os.path.isfile(load_checkpoint):
+        logging.info('Loading the checkpoint')
+        checkpoint = torch.load(load_checkpoint)
         if 'seg_model' in checkpoint:
             seg_model.load_state_dict(checkpoint['seg_model'])
         if 'aux_model' in checkpoint:

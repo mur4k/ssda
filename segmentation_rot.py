@@ -375,7 +375,7 @@ def run(source_dir, target_dir,
         
     #  evaluate the model
     seg_model.eval()
-    discr_model.eval()
+    aux_model.eval()
     with torch.no_grad():
         logging.info('Evaluate src')
         src_val_metrics = evaluate_segmentation_set(inf_source_val_dataloader, len(source_val_dataloader), 

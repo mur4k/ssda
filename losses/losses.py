@@ -113,11 +113,9 @@ class FocalLoss(nn.Module):
         input_soft = F.softmax(input, dim=1)
 
         # create the labels one hot tensor
-        target_one_hot = one_hot(labels=target, 
-                                 ignore_index=self.ignore_index, 
-                                 num_classes=input.shape[1],
-                                 device=input.device, 
-                                 dtype=input.dtype)
+        target_one_hot = one_hot(labels=target, ignore_index=self.ignore_index, 
+                                num_classes=input.shape[1], device=input.device, 
+                                dtype=input.dtype)
 
         # compute the actual focal loss
         weight = torch.pow(1. - input_soft + self.eps, self.gamma)
@@ -133,9 +131,74 @@ class FocalLoss(nn.Module):
             loss = torch.sum(loss_tmp)
         else:
             raise NotImplementedError("Invalid reduction mode: {}"
-                                      .format(self.reduction))
+                                .format(self.reduction))
         return loss
+    
 
+class NT_Xent(nn.Module):
+
+    def __init__(self, temperature, reduction='mean'):
+        super(NT_Xent, self).__init__()
+        self.temperature = temperature
+        self.reduction = reduction
+        self.criterion = nn.CrossEntropyLoss()
+
+    def forward(self, image_real_features: torch.Tensor, 
+                image_perturbed_features: torch.Tensor, memory_bank_features: torch.Tensor):
+        pos_similarities = F.cosine_similarity(image_real_features, 
+                                image_perturbed_features, 1) / self.temperature
+        neg_similarities = F.cosine_similarity(image_real_features.unsqueeze(1), 
+                                memory_bank_features.unsqueeze(0), 2) / self.temperature
+        neg_similarities = torch.sum(neg_similarities, dim=1)
+        logits = torch.cat([pos_similarities.unsqueeze(-1), neg_similarities.unsqueeze(-1)], dim=(-1))
+        labels = torch.zeros_like(pos_similarities, dtype=(torch.int64))
+        loss_tmp = self.criterion(logits, labels)
+        if self.reduction == 'none':
+            loss = loss_tmp
+        elif self.reduction == 'mean':
+            loss = torch.mean(loss_tmp)
+        elif self.reduction == 'sum':
+            loss = torch.sum(loss_tmp)
+        else:
+            raise NotImplementedError("Invalid reduction mode: {}"
+                                .format(self.reduction))
+        return loss
+            
+class NT_Xent2(nn.Module):
+
+    def __init__(self, temperature, batch_size, reduction='mean'):
+        super(NT_Xent2, self).__init__()
+        self.temperature = temperature
+        self.reduction = reduction
+        self.batch_size = batch_size
+        self.mask_positive = torch.diag_embed(torch.ones(batch_size, dtype=bool), offset=-batch_size) | \
+            torch.eye(2*batch_size, dtype=bool) | \
+            torch.diag_embed(torch.ones(batch_size, dtype=bool), offset=batch_size)
+        self.criterion = nn.CrossEntropyLoss()
+
+    def forward(self, image_features: torch.Tensor, memory_bank_features: torch.Tensor):
+        image_similarities = F.cosine_similarity(image_features.unsqueeze(1), 
+                                image_features.unsqueeze(0), 2) / self.temperature
+        memory_bank_similarities = F.cosine_similarity(image_features.unsqueeze(1), 
+                                memory_bank_features.unsqueeze(0), 2) / self.temperature
+        pos_similarities = torch.cat([image_similarities.diagonal(self.batch_size), 
+                                image_similarities.diagonal(-self.batch_size)])
+        neg_similarities = F.cosine_similarity(image_features.unsqueeze(1), 
+                                memory_bank_features.unsqueeze(0), 2) / self.temperature
+        neg_similarities = torch.sum(neg_similarities, dim=1)
+        logits = torch.cat([pos_similarities.unsqueeze(-1), neg_similarities.unsqueeze(-1)], dim=(-1))
+        labels = torch.zeros_like(pos_similarities, dtype=(torch.int64))
+        loss_tmp = self.criterion(logits, labels)
+        if self.reduction == 'none':
+            loss = loss_tmp
+        elif self.reduction == 'mean':
+            loss = torch.mean(loss_tmp)
+        elif self.reduction == 'sum':
+            loss = torch.sum(loss_tmp)
+        else:
+            raise NotImplementedError("Invalid reduction mode: {}"
+                                .format(self.reduction))
+        return loss
 
 
 ######################
@@ -143,13 +206,22 @@ class FocalLoss(nn.Module):
 ######################
 
 
-def focal_loss(
-        input: torch.Tensor,
-        target: torch.Tensor,
-        alpha: float,
-        gamma: Optional[float] = 2.0,
-        reduction: Optional[str] = 'none') -> torch.Tensor:
-    r"""Function that computes Focal loss.
+def focal_loss(input, target, alpha, gamma=2.0, reduction='none'):
+    """Function that computes Focal loss.
     """
     return FocalLoss(alpha, gamma, reduction)(input, target)
-    
+
+
+def nt_xent(image_real_features, image_perturbed_features, 
+            memory_bank_features, temperature=1.0, reduction='none'):
+    """Function that computes Focal loss.
+    """
+    return NT_Xent(temperature, reduction)(image_real_features, 
+                                           image_perturbed_features, memory_bank_features)
+
+
+def nt_xent2(image_features, memory_bank_features, batch_size,
+             temperature=1.0, reduction='none'):
+    """Function that computes Focal loss.
+    """
+    return NT_Xent2(temperature, batch_size, reduction)(image_features, memory_bank_features)

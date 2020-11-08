@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms, utils
-
+from utils.utils import *
 
 class SegmentationDataSet(Dataset):
     def __init__(self, root, image_list_name, label_list_name, size, 
@@ -154,3 +154,103 @@ class JigsawDataSet(SegmentationDataSet):
                 data['gt'][data['gt'] == k] = v
 
         return data
+
+class PIRLDataSet(SegmentationDataSet):
+    def __init__(self, root, image_list_name, label_list_name, size, 
+        size_crop, s=1, mean=(0, 0, 0), std=(1, 1, 1), label2train=None):
+        self.size_crop = size_crop
+        self.s = s
+        super().__init__(root, image_list_name, label_list_name, size, mean, std, label2train)
+
+    def compose_transforms(self):
+        self.image_preprocess_transform = transforms.Compose([
+            transforms.Resize(self.size, Image.BILINEAR)])
+        self.image_aux_preprocess_transform = transforms.Compose([
+            transforms.RandomCrop(self.size_crop)])
+        self.color_jitter = transforms.ColorJitter(0.4*self.s, 0.4*self.s, 0.4*self.s, 0.2*self.s)
+        self.aux_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),  # with 0.5 probability
+            transforms.RandomApply([self.color_jitter], p=0.8)])
+        self.normalize_transform = transforms.Compose([
+            transforms.ToTensor(), 
+            transforms.Normalize(mean=self.mean, std=self.std)])
+        self.label_preprocess_transform = transforms.Compose([
+            transforms.Resize(self.size, Image.NEAREST),
+            transforms.Lambda(lambda gt: torch.tensor(np.array(gt, dtype=np.int64)))])
+
+    def __getitem__(self, index):
+        image, label, name = self.read_data(index)
+
+        image = self.image_preprocess_transform(image)
+        aux_image_real = self.image_aux_preprocess_transform(image)
+
+        aux_image_perturbed = self.aux_transform(aux_image_real)
+
+        data = {'image': self.normalize_transform(image), 
+            'gt': self.label_preprocess_transform(label),
+            'aux_image_real': self.normalize_transform(aux_image_real),
+            'aux_image_perturbed': self.normalize_transform(aux_image_perturbed),
+            'name': name}
+
+        # re-assign labels to match the unified format
+        if self.label2train is not None:
+            for k, v in self.label2train.items():
+                data['gt'][data['gt'] == k] = v
+
+        return data
+    
+    
+class PIRLDataSet2(SegmentationDataSet):
+    def __init__(self, root, image_list_name, label_list_name, size, 
+        grid_size, s=1, mean=(0, 0, 0), std=(1, 1, 1), label2train=None):
+        self.grid_size = grid_size
+        self.tile_size = (size[0] // grid_size[0], size[1] // grid_size[1])
+        self.s = s
+        super().__init__(root, image_list_name, label_list_name, size, mean, std, label2train)
+
+    def tilewise_transform(self, img, transform):
+        tiles = []
+        for j in range(self.grid_size[0]*self.grid_size[1]):
+            top = int(j) // self.grid_size[1] * self.tile_size[0]
+            left = int(j) % self.grid_size[1] * self.tile_size[1]
+            height = self.tile_size[0]
+            width = self.tile_size[1]
+            tile = transforms.functional.crop(img, top, left, height, width)
+            tiles.append(self.normalize_transform(transform(tile)))
+        return torch.stack(tiles)    
+    
+    def compose_transforms(self):
+        self.image_preprocess_transform = transforms.Compose([
+            transforms.Resize(self.size, Image.BILINEAR)])
+        self.image_aux_preprocess_transform = transforms.Compose([transforms.Lambda(lambda x: x)])
+        self.color_jitter = transforms.ColorJitter(0.4*self.s, 0.4*self.s, 0.4*self.s, 0.2*self.s)
+        self.aux_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),  # with 0.5 probability
+            transforms.RandomApply([self.color_jitter], p=0.8)])
+        self.normalize_transform = transforms.Compose([
+            transforms.ToTensor(), 
+            transforms.Normalize(mean=self.mean, std=self.std)])
+        self.label_preprocess_transform = transforms.Compose([
+            transforms.Resize(self.size, Image.NEAREST),
+            transforms.Lambda(lambda gt: torch.tensor(np.array(gt, dtype=np.int64)))])
+
+    def __getitem__(self, index):
+        image, label, name = self.read_data(index)
+
+        image = self.image_preprocess_transform(image)
+        aux_image_real = self.tilewise_transform(image, self.image_aux_preprocess_transform)
+        aux_image_perturbed = self.tilewise_transform(image, self.aux_transform)
+
+        data = {'image': self.normalize_transform(image), 
+            'gt': self.label_preprocess_transform(label),
+            'aux_image_real': aux_image_real,
+            'aux_image_perturbed': aux_image_perturbed,
+            'name': name}
+
+        # re-assign labels to match the unified format
+        if self.label2train is not None:
+            for k, v in self.label2train.items():
+                data['gt'][data['gt'] == k] = v
+
+        return data
+    

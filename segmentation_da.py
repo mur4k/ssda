@@ -80,7 +80,7 @@ def run(source_dir, target_dir,
         ])
     start_epoch = 0
     if seed > 0:
-        torch.manual_seed(seed)
+        set_seed(seed)
     src_label = 1.
     tar_label = 0.
 
@@ -420,25 +420,28 @@ def run(source_dir, target_dir,
     results.update({'src_'+k: v for k, v in src_val_metrics.items()})
     results.update({'tar_'+k: v for k, v in tar_val_metrics.items()})
 
+    if seed > 0:
+        set_seed(seed)
+    
     #  create visualizations: t-SNE and qualititative predictions
     predictions_path = os.path.join(pred_dir, model_name)
     with torch.no_grad():
         logging.info('Write predcitions for src')
-        write_predictions(source_val_dataloader, 
+        write_predictions(source_val_dataset, 
             seg_model, device, 
-            batches_to_visualize, predictions_path, 
+            batches_to_visualize*val_batch_size, predictions_path, 
             GTA5_MEAN, GTA5_STD, GTA5_LABELS2TRAIN, 
             GTA5_LABELS2PALETTE, prefix='src_')
         logging.info('Write predcitions for tar')
-        write_predictions(target_val_dataloader, 
+        write_predictions(target_val_dataset, 
             seg_model, device, 
-            batches_to_visualize, predictions_path,
+            batches_to_visualize*val_batch_size, predictions_path,
             CITYSCAPES_MEAN, CITYSCAPES_STD, CITYSCAPES_LABELS2TRAIN,
             CITYSCAPES_LABELS2PALETTE, prefix='tar_')
         logging.info('Create t-SNE embeddings')
-        create_embeddings(writer, inf_source_val_dataloader, inf_target_val_dataloader,
+        create_embeddings(writer, source_val_dataset, target_val_dataset,
             seg_model, device, 
-            batches_to_visualize, points_to_sample)
+            batches_to_visualize*val_batch_size, points_to_sample)
     
     # the returned result will be written into the database
     return results

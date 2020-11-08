@@ -64,9 +64,9 @@ fixed:
   # data params
   source_dir: /nfs/students/mirlas/data/
   target_dir: /nfs/students/mirlas/data/
-  snapshots_dir: /nfs/students/mirlas/snapshots/seg_da/
-  log_dir: /nfs/students/mirlas/logdir/seg_da/
-  pred_dir: /nfs/students/mirlas/predictions/seg_da/
+  snapshots_dir: /nfs/students/mirlas/snapshots/seg/
+  log_dir: /nfs/students/mirlas/logdir/seg/
+  pred_dir: /nfs/students/mirlas/predictions/seg/
   load_checkpoint: ''
   source_train_images: gta5_images_train.txt
   source_train_labels: gta5_labels_train.txt

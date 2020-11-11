@@ -46,7 +46,7 @@
 seml:
   name: segmentation_loss_ablation
   project_root_dir: /nfs/homedirs/mirlas/ssda
-  executable: /nfs/homedirs/mirlas/ssda/experiments/segmentation.py
+  executable: /nfs/homedirs/mirlas/ssda/segmentation.py
   conda_environment: ssda
   output_dir: /nfs/homedirs/mirlas/ssda/slurm-output/
 

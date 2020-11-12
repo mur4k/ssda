@@ -87,11 +87,7 @@ fixed:
   pretrained_backbone: True
   segmentation_loss: ce         #  [ce, focal]
   gamma: 0.0                    #  only used if segmentation_loss is focal
-  grid_size: [2, 4]
   memory_bank_device: 'cuda:0'
-  aux_injection_point: output
-  lambda_aux: 0.005
-  proj_size: 256
   # optim params
   learning_rate: 0.00025
   momentum: 0.9
@@ -109,7 +105,22 @@ fixed:
   seed: 42
 
 grid:
-  
+  aux_injection_point:     #  [output, feature]
+    type: choice
+    options:
+      - output
+  lambda_aux:
+    type: choice
+    options:
+      - 0.005
+  grid_size:
+    type: choice
+    options:
+      - [2, 4]
+  proj_size:
+    type: choice
+    options:
+      - 256
   temperature:
     type: choice
     options:

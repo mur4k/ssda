@@ -302,7 +302,7 @@ def run(source_dir, target_dir,
         #  update metrics
         with torch.no_grad():
             running_src_seg_loss += src_seg_loss.item()
-            running_tar_aux_loss += tar_aux_loss.item()  if negative_batch is not None else 0.0
+            running_tar_aux_loss += tar_aux_loss.item() if negative_batch is not None else 0.0
             src_seg_pred = output.argmax(1)
             running_cm += fast_hist(src_seg_pred, gt, NUM_CLASSES)
 

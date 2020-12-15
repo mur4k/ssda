@@ -116,6 +116,7 @@ grid:
   grid_size:
     type: choice
     options:
+      - [1, 2]
       - [2, 4]
   proj_size:
     type: choice

@@ -120,7 +120,7 @@ def write_predictions(dataset, seg_model, device, samples_to_visualize, predicti
         save_image(pred_colored.type(torch.float) / 255,
                    os.path.join(predictions_path, prefix+'pred_'+name))
 
-def sample_features(dataset, seg_model, device, num_samples, pts_to_sample):
+def sample_features(dataset, seg_model, device, num_samples, pts_to_sample, level='mid'):
     deep_features = []
     labels = []
     idx = get_randperm(len(dataset), num_samples)
@@ -132,6 +132,8 @@ def sample_features(dataset, seg_model, device, num_samples, pts_to_sample):
         image.unsqueeze_(0)
         gt.unsqueeze_(0)
         features = seg_model.backbone(image)['out']
+        if level == 'out':
+            features = seg_model.classifier(features)
         gt_downscaled = F.interpolate(gt.unsqueeze(1).type(torch.float), features.shape[-2:], mode='nearest')
         gt_downscaled = gt_downscaled.type(gt.type())
         features = features.permute(0, 2, 3, 1)

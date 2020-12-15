@@ -73,35 +73,40 @@ class RotationDataSet(SegmentationDataSet):
     def compose_transforms(self):
         self.image_preprocess_transform = transforms.Compose([
             transforms.Resize(self.size, Image.BILINEAR)])
-        self.image_aux_preprocess_transform = transforms.Compose([
-            transforms.RandomCrop(self.size_crop)])
-        self.aux_transform = transforms.functional.rotate
         self.normalize_transform = transforms.Compose([
             transforms.ToTensor(), 
             transforms.Normalize(mean=self.mean, std=self.std)])
         self.label_preprocess_transform = transforms.Compose([
-            transforms.Resize(self.size, Image.NEAREST),
+            transforms.Resize(self.size, Image.NEAREST)])
+        self.label_postprocess_transform = transforms.Compose([
             transforms.Lambda(lambda gt: torch.tensor(np.array(gt, dtype=np.int64)))])
 
     def __getitem__(self, index):
         image, label, name = self.read_data(index)
-
+        
         image = self.image_preprocess_transform(image)
-        aux_image = self.image_aux_preprocess_transform(image)
+        label = self.label_preprocess_transform(label)
+        
+        i, j, h, w = transforms.RandomCrop.get_params(image, 
+            output_size=(self.size_crop, self.size_crop))
+        aux_image = transforms.functional.crop(image, i, j, h, w)
+        aux_label = transforms.functional.crop(label, i, j, h, w)
 
-        aux_label = torch.randint(self.rot_classes+1, size=(1,)).squeeze()  # added 1 for class 0: unrotated
-        aux_image = self.aux_transform(img=aux_image, angle=aux_label*90)
+        aux_gt = torch.randint(self.rot_classes+1, size=(1,)).squeeze()  # added 1 for class 0: unrotated
+        aux_image = transforms.functional.rotate(img=aux_image, angle=aux_gt*90)
 
         data = {'image': self.normalize_transform(image), 
             'aux_image': self.normalize_transform(aux_image),
-            'gt': self.label_preprocess_transform(label),
-            'aux_gt': aux_label,
+            'aux_label': self.label_postprocess_transform(aux_label),
+            'gt': self.label_postprocess_transform(label),
+            'aux_gt': aux_gt,
             'name': name}
 
         # re-assign labels to match the unified format
         if self.label2train is not None:
             for k, v in self.label2train.items():
                 data['gt'][data['gt'] == k] = v
+                data['aux_label'][data['aux_label'] == k] = v
 
         return data
     
@@ -112,19 +117,25 @@ class JigsawDataSet(SegmentationDataSet):
         self.grid_size = grid_size
         self.tile_size = (size[0] // grid_size[0], size[1] // grid_size[1])
         super().__init__(root, image_list_name, label_list_name, size, mean, std, label2train)
+        
+    def get_tile(self, img, j):
+        top = int(j) // self.grid_size[1] * self.tile_size[0]
+        left = int(j) % self.grid_size[1] * self.tile_size[1]
+        height = self.tile_size[0]
+        width = self.tile_size[1]
+        tile = transforms.functional.crop(img, top, left, height, width)
+        return tile
 
-    def jigsaw_transform(self, img):
-        aux_label = torch.randperm(self.grid_size[0]*self.grid_size[1])
+    def jigsaw_transform(self, img, permutation, t, return_sealed=True):
         tiles = []
-        for i, j in enumerate(aux_label):
-            top = int(j) // self.grid_size[1] * self.tile_size[0]
-            left = int(j) % self.grid_size[1] * self.tile_size[1]
-            height = self.tile_size[0]
-            width = self.tile_size[1]
-            tile = transforms.functional.crop(img, top, left, height, width)
-            tiles.append(self.normalize_transform(tile))
-        aux_image = utils.make_grid(tiles, nrow=self.grid_size[1], padding=0)
-        return aux_label.view(self.grid_size), aux_image
+        for j in permutation.view(-1):
+            tile = self.get_tile(img, j)
+            tiles.append(t(tile))
+        if return_sealed:
+            aux_image = utils.make_grid(tiles, nrow=self.grid_size[1], padding=0)
+        else:
+            aux_image = torch.stack(tiles)
+        return aux_image
 
     def compose_transforms(self):
         self.image_preprocess_transform = transforms.Compose([
@@ -133,25 +144,35 @@ class JigsawDataSet(SegmentationDataSet):
             transforms.ToTensor(), 
             transforms.Normalize(mean=self.mean, std=self.std)])
         self.label_preprocess_transform = transforms.Compose([
-            transforms.Resize(self.size, Image.NEAREST),
+            transforms.Resize(self.size, Image.NEAREST)])
+        self.label_postprocess_transform = transforms.Compose([
             transforms.Lambda(lambda gt: torch.tensor(np.array(gt, dtype=np.int64)))])
 
     def __getitem__(self, index):
         image, label, name = self.read_data(index)
 
         image = self.image_preprocess_transform(image)
-        aux_label, aux_image = self.jigsaw_transform(image)
+        label = self.label_preprocess_transform(label)
+        
+        aux_gt = torch.randperm(self.grid_size[0]*self.grid_size[1])
+        aux_gt = aux_gt.view(self.grid_size)
+        
+        aux_image = self.jigsaw_transform(image, aux_gt, self.normalize_transform)
+        aux_label = self.jigsaw_transform(label, aux_gt, 
+                                          self.label_postprocess_transform, return_sealed=False)
 
         data = {'image': self.normalize_transform(image), 
             'aux_image': aux_image,
-            'gt': self.label_preprocess_transform(label),
-            'aux_gt': aux_label,
+            'aux_label': aux_label,
+            'gt': self.label_postprocess_transform(label),
+            'aux_gt': aux_gt,
             'name': name}
 
         # re-assign labels to match the unified format
         if self.label2train is not None:
             for k, v in self.label2train.items():
                 data['gt'][data['gt'] == k] = v
+                data['aux_label'][data['aux_label'] == k] = v
 
         return data
 
@@ -207,17 +228,21 @@ class PIRLDataSet2(SegmentationDataSet):
         self.tile_size = (size[0] // grid_size[0], size[1] // grid_size[1])
         self.s = s
         super().__init__(root, image_list_name, label_list_name, size, mean, std, label2train)
+        
+    def get_tile(self, img, j):
+        top = int(j) // self.grid_size[1] * self.tile_size[0]
+        left = int(j) % self.grid_size[1] * self.tile_size[1]
+        height = self.tile_size[0]
+        width = self.tile_size[1]
+        tile = transforms.functional.crop(img, top, left, height, width)
+        return tile
 
     def tilewise_transform(self, img, transform):
         tiles = []
         for j in range(self.grid_size[0]*self.grid_size[1]):
-            top = int(j) // self.grid_size[1] * self.tile_size[0]
-            left = int(j) % self.grid_size[1] * self.tile_size[1]
-            height = self.tile_size[0]
-            width = self.tile_size[1]
-            tile = transforms.functional.crop(img, top, left, height, width)
+            tile = self.get_tile(img, j)
             tiles.append(self.normalize_transform(transform(tile)))
-        return torch.stack(tiles)    
+        return torch.stack(tiles)
     
     def compose_transforms(self):
         self.image_preprocess_transform = transforms.Compose([

@@ -115,10 +115,6 @@ grid:
     type: choice
     options:
       - 0.005
-  grid_size:
-    type: choice
-    options:
-      - [2, 4]
   proj_size:
     type: choice
     options:
@@ -130,11 +126,6 @@ grid:
       - 1.25
       - 1.5
       - 3
-  memory_bank_params:
-    type: choice
-    options:
-      - [256, 256]
-      - [512, 512]
   da_injection_point:     #  [output, feature]
     type: choice
     options:
@@ -144,3 +135,28 @@ grid:
     type: choice
     options:
       - 0.0002
+      
+small_grid_size:
+  grid:
+    grid_size:
+      type: choice
+      options:
+        - [1, 2]
+    memory_bank_params:
+      type: choice
+      options:
+        - [128, 128]
+        - [256, 256]
+
+large_grid_size:
+  grid:
+    grid_size:
+      type: choice
+      options:
+        - [2, 4]
+    memory_bank_params:
+      type: choice
+      options:
+        - [256, 256]
+        - [512, 512]
+
